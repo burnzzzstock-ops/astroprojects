@@ -1,6 +1,6 @@
 # Buy List
 
-Every morning, a list of used cars for sale within 100 miles of 39540 that have
+Every morning, a list of used cars for sale within 200 miles of 39540 that have
 been listed a long time (60+ days), ranked and grouped by dealer, for the used car
 manager to call and try to buy. It runs on a PC at the store and costs nothing:
 no paid services, no hosting, no logins.
@@ -9,7 +9,7 @@ no paid services, no hosting, no logins.
 
 - **Scans three free sources at 6:00 AM (Mon-Sat):**
   - **CarGurus** shows how many days every car has been listed. The tool reads it
-    oldest-listed first within 100 miles.
+    oldest-listed first within 200 miles (from $10,000 up, in price bands).
   - **Dealer websites** in `dealers.csv`, which comes filled in with 308 dealers
     within about 100 miles (see below). Most don't show days listed, so the tool
     counts from the first day it sees each car (and uses an in-stock date when a
@@ -78,6 +78,13 @@ Open the **Buy List** shortcut, or go to http://localhost:4400.
   **Notes** and **Offer $** save with the call.
 - **Whole lot: No answer / Left msg** logs it for every car at that dealer at once.
 - **Hide dealer** takes a lot off the list for good. Undo it on the **Hidden** tab.
+- **What we're looking for** (above the tabs): about two dozen filters, pick as many as you like in each:
+  make, model, year, body style, drivetrain, fuel, engine, transmission, exterior and interior color,
+  features (leather, sunroof, third row…), certified, price, miles, days listed, price vs. CarGurus'
+  market value, CarGurus rating, price dropped, distance, state, city, dealer, franchise or independent,
+  where it was found, and call status. The Top 10, today's calls, All aged and the CSV all follow them.
+  **+ Save this search** keeps a set under a name ("Trucks under 40k"); tap it to switch back.
+  **★ Astro default** clears them: everything aged, Fords first, then under 80k miles.
 - **All aged** searches every aged car ("tacoma", "f-150 lariat", "gulfport").
 - **Dealers** lists every dealer being watched, closest first, with how many aged
   cars each has and any site that couldn't be read on the last scan.
@@ -95,7 +102,7 @@ firewall: allow it on **private** networks.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `zip`, `radiusMiles` | 39540, 100 | Center and radius of the search |
+| `zip`, `radiusMiles` | 39540, 200 | Center and radius of the search (CarGurus; the dealer-site list covers ~100 mi) |
 | `minDaysListed` / `maxDaysListed` | 60 / 365 | "Listed a long time" window; past 365 days is usually a dead listing |
 | `minPrice`, `maxMiles` | 10000, 175000 | Skip junk |
 | `focusMakes` | ["Ford"] | Makes ranked first (add "Lincoln" etc.; `[]` = off) |
@@ -105,7 +112,8 @@ firewall: allow it on **private** networks.
 | `scanTime`, `scanDays` | "06:00", Mon-Sat | When the morning scan runs (0 = Sunday) |
 | `excludeSellers` | your store + CarMax, Carvana… | Seller-name words to never list |
 | `browser.headless` | true | Set `false` to watch the browser work (helps if a site asks "are you human?") |
-| `sources.cargurus.maxPages` | 150 | How deep into CarGurus' oldest-first results to go (it stops on its own at 60 days, ~140 pages) |
+| `sources.cargurus.maxPages` | 400 | Most CarGurus pages per scan, all price bands together (each band stops on its own at 60 days) |
+| `sources.cargurus.priceBands` | 10000 … 60000 | Price edges the CarGurus search is split on (it returns at most 10,000 results per search) |
 | `sources.marketcheck.apiKey` | "" | Optional free key from https://www.marketcheck.com/apis |
 | `sources.dealerSites.maxPagesPerDealer` | 8 | Pages or "load more" clicks per dealer site |
 | `sources.dealerSites.concurrency` | 3 | Dealer sites read at the same time |
@@ -131,7 +139,7 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 38 tests offline: the extractor against CarGurus, JSON-LD and
+`npm test` runs 45 tests offline: the extractor against CarGurus, JSON-LD and
 dealer-API data shapes; merging and price drops; ranking; call outcomes; and a full
 headless-browser scan against fake local copies of each kind of site. See
 `../../CLAUDE.md` for how it's built.

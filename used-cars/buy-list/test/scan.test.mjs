@@ -11,7 +11,7 @@ import { isolate } from "./helpers.mjs";
 
 const dir = isolate({
   sources: {
-    cargurus: { enabled: true, maxPages: 20, pageDelayMs: 0 },
+    cargurus: { enabled: true, maxPages: 20, pageDelayMs: 0, priceBands: [] },
     marketcheck: { enabled: true, apiKey: "test-key", maxPages: 2, monthlyCallCap: 450 },
     dealerSites: { enabled: true, file: path.join(process.env.TMPDIR || "/tmp", "unused.csv"), maxPagesPerDealer: 6, pageDelayMs: 0 },
   },
@@ -175,6 +175,33 @@ test("CarGurus fallback: when the feed is gone, read the search page and click N
     assert.ok(r.listings.every((l) => l.source === "cargurus" && l.url));
   } finally {
     await browser.close();
+  }
+});
+
+test("CarGurus price bands: one oldest-first search per band, each stopping at the 60-day line", async () => {
+  const app = express();
+  let hits = 0;
+  app.get("/", (req, res) => res.send("<html><title>Home</title><body>ok</body></html>"));
+  app.get("/Cars/searchResults.action", (req, res) => {
+    hits++;
+    const lo = Number(req.query.minPrice || 0), hi = Number(req.query.maxPrice || Infinity);
+    const inBand = CG.filter((c) => c.price >= lo && c.price <= hi); // already oldest first
+    const off = Number(req.query.offset), n = Number(req.query.maxResults);
+    res.json(off >= inBand.length ? null : inBand.slice(off, off + n));
+  });
+  const srv = await new Promise((r) => { const s = app.listen(0, "127.0.0.1", () => r(s)); });
+  const { browser, context } = await launchBrowser();
+  try {
+    const cfg = { ...config, minPrice: 18000, sources: { ...config.sources, cargurus: { ...config.sources.cargurus, priceBands: [19000, 20000] } } };
+    const r = await fetchCarGurus(cfg, { context, base: `http://127.0.0.1:${srv.address().port}`, debugDir: path.join(dir, "debug-bands") });
+    assert.deepEqual(r.bands.map((b) => b.band), ["$18000-18999", "$19000-19999", "$20000-up"]);
+    assert.ok(r.bands.every((b) => b.done && !b.capped));
+    const aged = CG.filter((c) => c.daysOnMarket >= 60).length;
+    assert.ok(r.listings.length >= aged && r.listings.length <= aged + 3 * 50, "every 60+ day car, plus at most one page past the line per band");
+    assert.ok(hits < 20, `stops each band at the 60-day line (${hits} requests)`);
+  } finally {
+    await browser.close();
+    srv.close();
   }
 });
 

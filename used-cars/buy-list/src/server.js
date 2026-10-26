@@ -5,8 +5,9 @@ import express from "express";
 import os from "node:os";
 import path from "node:path";
 import { config, ROOT } from "./config.js";
-import { readDb, withDb } from "./store.js";
-import { OUTCOMES, buildCallList, browseListings, recordOutcome, status, callListCsv, dealerRoster } from "./buyList.js";
+import { readDb, withDb, readPrefs, savePrefs } from "./store.js";
+import { OUTCOMES, buildCallList, browseListings, recordOutcome, status, callListCsv, dealerRoster, filterSummary } from "./buyList.js";
+import { parseFilter, cleanFilter } from "./filters.js";
 import { readDealers } from "./sources/dealerSites.js";
 import { runScan, scanRunning } from "./scan.js";
 import { localDay } from "./util.js";
@@ -31,18 +32,35 @@ app.get("/api/status", (req, res) => {
   });
 });
 
-app.get("/api/today", (req, res) => res.json(buildCallList(readDb(), config)));
+// ?f= is the UCM's filter as JSON (src/filters.js); none = the store's default ranking.
+app.get("/api/today", (req, res) => res.json(buildCallList(readDb(), config, Date.now(), parseFilter(req.query.f))));
 
 app.get("/api/today.csv", (req, res) => {
   res.set("Content-Type", "text/csv; charset=utf-8");
   res.set("Content-Disposition", `attachment; filename="buy-list-${localDay()}.csv"`);
-  res.send("﻿" + callListCsv(buildCallList(readDb(), config))); // BOM so Excel shows − and 📉
+  res.send("﻿" + callListCsv(buildCallList(readDb(), config, Date.now(), parseFilter(req.query.f)))); // BOM so Excel shows − and 📉
 });
 
 app.get("/api/listings", (req, res) => {
   res.json(browseListings(readDb(), config, {
     q: String(req.query.q || ""), sort: String(req.query.sort || "score"), limit: Math.min(Number(req.query.limit) || 150, 500),
+    filter: parseFilter(req.query.f),
   }));
+});
+
+app.get("/api/filters", (req, res) => res.json(filterSummary(readDb(), config, parseFilter(req.query.f))));
+
+// The UCM's current filter and named saved searches (data/prefs.json), so they stick.
+app.get("/api/prefs", (req, res) => res.json(readPrefs()));
+app.put("/api/prefs", (req, res) => {
+  const b = req.body || {}, p = readPrefs();
+  if (b.active !== undefined) p.active = cleanFilter(b.active);
+  if (Array.isArray(b.saved)) {
+    p.saved = b.saved.slice(0, 50)
+      .map((s) => ({ name: String(s?.name || "").trim().slice(0, 60), filter: cleanFilter(s?.filter) }))
+      .filter((s) => s.name);
+  }
+  res.json(savePrefs(p));
 });
 
 // Body: { keys: [...], outcome, notes?, offer? } — several keys = a whole-lot tap.

@@ -15,14 +15,28 @@ import { sleep } from "../util.js";
 
 export const BASE = "https://www.cargurus.com";
 const PER_PAGE = 50;
+// The feed returns nothing past offset 10,000 (seen live 2026-10-26), so a big search is
+// split into price bands that each reach the 60-day line before it.
+const OFFSET_CAP = 10000;
 
-export function feedUrl(cfg, offset, base = BASE) {
+export function feedUrl(cfg, offset, base = BASE, band = null) {
   const q = new URLSearchParams({
     zip: cfg.zip, distance: String(cfg.radiusMiles), inventorySearchWidgetType: "AUTO",
     sortDir: "DESC", sortType: "AGE_IN_DAYS", offset: String(offset), maxResults: String(PER_PAGE),
     filtersModified: "true",
   });
+  if (band?.min) q.set("minPrice", String(band.min));
+  if (band?.max) q.set("maxPrice", String(band.max));
   return `${base}/Cars/searchResults.action?${q}`;
+}
+
+// Price bands from the config's edges, starting at minPrice: [10000, 15000, …] → $10-15k, …, $60k+.
+// No edges = one search over every price.
+export function priceBands(cfg) {
+  const edges = [...new Set([cfg.minPrice || 0, ...(cfg.sources.cargurus.priceBands || [])])]
+    .filter((e) => e >= (cfg.minPrice || 0)).sort((a, b) => a - b);
+  if (edges.length < 2) return [null];
+  return edges.map((min, i) => ({ min: min || null, max: edges[i + 1] ? edges[i + 1] - 1 : null }));
 }
 
 export function searchPageUrl(cfg, base = BASE) {
@@ -53,33 +67,43 @@ function makeAgeGate(minDays) {
 
 async function viaFeed(page, cfg, { base, maxPages, delay, log }) {
   const found = new Map();
-  const pastWindow = makeAgeGate(cfg.minDaysListed);
-  let offset = 0, pages = 0, lastStatus = null, done = false;
-  for (let p = 0; p < maxPages; p++) {
-    const r = await page.evaluate(async (u) => {
-      try {
-        const res = await fetch(u, { headers: { accept: "application/json, text/plain, */*" }, credentials: "include" });
-        return { status: res.status, body: await res.text() };
-      } catch (e) {
-        return { status: 0, body: String(e) };
+  const bands = [];
+  let pages = 0, lastStatus = null;
+  for (const band of priceBands(cfg)) {
+    const label = band ? `$${band.min ?? 0}-${band.max ?? "up"}` : "feed";
+    const pastWindow = makeAgeGate(cfg.minDaysListed);
+    let offset = 0, done = false, capped = false, cars = 0;
+    while (pages < maxPages) {
+      if (offset >= OFFSET_CAP) { capped = true; break; }
+      const r = await page.evaluate(async (u) => {
+        try {
+          const res = await fetch(u, { headers: { accept: "application/json, text/plain, */*" }, credentials: "include" });
+          return { status: res.status, body: await res.text() };
+        } catch (e) {
+          return { status: 0, body: String(e) };
+        }
+      }, feedUrl(cfg, offset, base, band));
+      pages++;
+      lastStatus = r.status;
+      if (r.status !== 200) break;
+      const rows = extractListings(parseJsonLoose(r.body)).filter((l) => !l.isNew);
+      let added = 0;
+      for (const l of rows) {
+        const k = l.vin || l.sourceId;
+        if (k && !found.has(k)) { found.set(k, finish(l, base)); added++; }
       }
-    }, feedUrl(cfg, offset, base));
-    pages++;
-    lastStatus = r.status;
-    if (r.status !== 200) break;
-    const rows = extractListings(parseJsonLoose(r.body)).filter((l) => !l.isNew);
-    let added = 0;
-    for (const l of rows) {
-      const k = l.vin || l.sourceId;
-      if (k && !found.has(k)) { found.set(k, finish(l, base)); added++; }
+      cars += added;
+      log(`cargurus ${label} page ${pages}: ${rows.length} listings (${added} new)`);
+      if (!added) { done = true; break; } // end of results, or the feed ignores paging
+      offset += rows.length;
+      if (pastWindow(rows)) { done = true; break; }
+      await sleep(delay + Math.random() * 1000);
     }
-    log(`cargurus feed page ${pages}: ${rows.length} listings (${added} new)`);
-    if (!added) { done = true; break; } // end of results, or the feed ignores paging
-    offset += rows.length;
-    if (pastWindow(rows)) { done = true; break; }
-    await sleep(delay + Math.random() * 1000);
+    bands.push({ band: label, cars, done, capped });
+    if (capped) log(`cargurus ${label}: hit CarGurus' ${OFFSET_CAP}-result cap before the ${cfg.minDaysListed}-day line; add a price edge inside it (sources.cargurus.priceBands)`);
+    if (lastStatus !== 200 || pages >= maxPages) break;
   }
-  return { listings: [...found.values()], pages, truncated: !done, lastStatus };
+  return { listings: [...found.values()], pages, truncated: bands.some((b) => !b.done), bands, lastStatus };
 }
 
 const NEXT_SELECTORS = [

@@ -17,13 +17,16 @@ department/project. Read this first in any new session.
 
 ## used-cars/buy-list: aged-inventory Buy List
 
-The used car manager's daily call sheet: used cars for sale within 100 mi of 39540 listed
+The used car manager's daily call sheet: used cars for sale within 200 mi of 39540 (CarGurus; the dealer-site list covers ~100 mi) listed
 60+ days, ranked, grouped by dealer, with call outcomes tracked. Node 20+, runs locally
 (`npm start` → http://localhost:4400). Windows install is `setup.bat`, which runs npm install,
 `npx playwright install chromium`, copies the config template, adds a Startup shortcut to
 `start.bat` (restart loop) and a desktop `.url` link.
 
-- **Storage:** one JSON file, `data/buylist.json` (`src/store.js`), with no native deps. Every write
+- **Storage:** one JSON file, `data/buylist.json` (`src/store.js`), with no native deps. `readDb` reuses the
+  last parse while the file's mtime/size are unchanged (tens of MB at 200 mi; every page request reads it);
+  `withDb` always parses fresh. The UCM's filter + saved searches live in `data/prefs.json`
+  (`readPrefs`/`savePrefs`) so a filter tap never rewrites the big file. Every write
   is a synchronous load → modify → save (`withDb`) and atomic (tmp file + rename, plus a `.bak`),
   so outcome taps and a finishing scan can't clobber each other. A scan gathers everything async
   first and touches the file only once, at the end.
@@ -43,7 +46,15 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
     `originalPictureData.url`; `sellerCity` is "Gulfport, MS" (the extractor strips the state);
     `expectedPrice` is CarGurus' market-value estimate, NOT the asking price, so it isn't a price
     alias. CarGurus' detail pages sit behind DataDome (a captcha in a normal browser); the feed
-    wasn't challenged.
+    wasn't challenged. **200 mi (2026-10-26):** the feed returns `null` past offset 10,000, and at 200 mi
+    the oldest-first list only gets to ~84 days by then, so the search runs once per price band
+    (`priceBands` edges from `minPrice`: $10k/15k/20k/25k/30k/40k/60k+, via the `minPrice`/`maxPrice`
+    params, which it honors), each to its own 60-day line. A band that hits the cap is logged and
+    marked `capped` in the scan record's `cargurus.bands`. `maxPages` (400) is the total across bands.
+    The feed also carries what the filters use: `bodyTypeName`, `localizedDriveTrain`,
+    `localizedFuelType`, `localizedTransmission`, `localizedEngineDisplayName`,
+    `normalizedExteriorColor`, `localizedInteriorColor`, `isCPO`, `options` (features),
+    `isFranchiseDealer`, `expectedPrice` (kept as `marketValue`).
   - `dealerSites.js`: one page per `dealers.csv` row. `dealers.csv` is TRACKED and pre-filled
     (2026-10-26) with 313 dealers within 98 mi (MS 111, AL 98, LA 104), sorted closest-first. They
     were researched by web search only: URLs and phones were seen in results but never fetched, and
@@ -124,6 +135,15 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   LLC/Inc; private sellers get one key per car), plus up to 6 per card riding along, with
   negotiating cars pinned. Outcomes: no_answer +1d, left_message +2d, too_high +10d,
   not_selling +21d, negotiating, bought, pass, reopen. Due days are local calendar days.
+- **Filters** (`src/filters.js`): 28 categories (`FACETS`), each a getter that buckets what the sites
+  sent (`body` → Truck/SUV/Sedan…, `drive` → 4WD/AWD/FWD/RWD, fuel, engine cylinders, transmission,
+  exterior/interior color, canonical features), falling back to the title/trim (known truck models,
+  "4WD" in the trim). Kinds: multi (any pick, OR), all (features: every pick), range [min,max], flag.
+  Across categories: AND. `cleanFilter` drops anything unknown. `facetCounts` counts each category's
+  options under all the OTHER filters in one pass (a car counts toward a category if it fails only that
+  one). The details are stored per car by `listings.js` (`DETAIL_FIELDS`) from any source. API:
+  `?f=<json>` on `/api/today`, `/api/today.csv`, `/api/listings`; `GET /api/filters` (defs + counts);
+  `GET/PUT /api/prefs` (`{active, saved:[{name, filter}]}`). No filter = "Astro default".
 - **Dealers tab** (`dealerRoster` in buyList.js, `GET /api/dealers`): every dealers.csv row with
   distance, aged count, cars seen on its site in 3 days, and the last scan's error for it.
 - **Server** (`src/server.js`): Express 5 on 127.0.0.1, or 0.0.0.0 only when `allowPhoneAccess`
@@ -131,12 +151,17 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   The scheduler ticks every 5 min: on scan days at/after `scanTime`, it runs once per day if no
   scheduled scan ran today (catches up after sleep). `data/scan.lock` (6h stale) prevents
   overlap with `npm run scan`.
-- **Page** (`public/index.html`): dark, phone-first, tap-to-call. Today opens with "Top 10 today" (one line per car with VIN/stock,
+- **Page** (`public/index.html`): dark, phone-first, tap-to-call. "What we're looking for" card above the
+  tabs: saved-search chips (★ Astro default, named searches, + Save), active-filter chips, the panel
+  (groups of `<details>`, tick boxes with counts, find box for long lists, min/max boxes); every
+  change saves `prefs.active` and reloads counts + the visible list (debounced). Filter values reach
+  the page only as escaped `data-` attributes read by delegated handlers. Today opens with "Top 10 today" (one line per car with VIN/stock,
   the name links to its full entry `#unit-N`). The status card shows one line for failed dealer sites
   (count + how many are 403s) linking to the Dealers tab, never the whole list. Buttons reference cars by index
   (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all
   text is escaped.
-- **Tests:** `npm test` (node --test, 38 tests, offline). `test/scan.test.mjs` runs a real headless
+- **Tests:** `npm test` (node --test, 45 tests, offline). `test/filters.test.mjs`: buckets, matching,
+  counts, and the call list following a filter. `test/scan.test.mjs` runs a real headless
   browser against an Express server that copies each site shape: CarGurus feed (400 cars,
   oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,
   dealer API + Next, JSON-LD, plain HTML + Load more, "VIN:" label cards, VIN-less

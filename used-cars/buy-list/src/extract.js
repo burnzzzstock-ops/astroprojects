@@ -26,7 +26,20 @@ const K = {
   url: ["vdpUrl", "vdp_url", "listingUrl", "detailUrl", "detailsUrl", "vehicleUrl", "vehicleDetailUrl", "url", "link", "href"],
   photo: ["primaryPhotoUrl", "imageUrl", "mainPhotoUrl", "thumbnailUrl", "pictureUrl", "photoUrl", "image", "photo",
     "thumbnail", "images", "photos", "photo_links", "originalPictureData", "pictureData"],
-  color: ["exteriorColor", "exterior_color", "extColor", "colorName", "color"],
+  color: ["exteriorColor", "exterior_color", "extColor", "colorName", "exteriorColorName", "localizedExteriorColor",
+    "exteriorColorLabel", "color"],
+  // For the filters: CarGurus names first, then DealerOn (Vehicle*), space.auto, AutoCorner (vehicle_*), schema.org.
+  colorGroup: ["normalizedExteriorColor", "genericColor", "vehicleGenericColor"],
+  intColor: ["localizedInteriorColor", "interiorColor", "interior_color", "intColor", "interiorColorLabel"],
+  body: ["bodyTypeName", "bodyType", "bodyStyle", "vehicleBodyStyle", "vehicle_body", "body"],
+  drive: ["localizedDriveTrain", "driveTrain", "drivetrain", "driveline", "vehicleDriveTrain", "vehicle_drivetrain",
+    "driveWheelConfiguration", "driveType"],
+  fuel: ["localizedFuelType", "fuelType", "fuel", "vehicleFuelType", "vehicle_fuel"],
+  trans: ["localizedTransmission", "transmission", "vehicleTransmission", "vehicle_transmission", "transmissionType"],
+  engine: ["localizedEngineDisplayName", "engine", "vehicleEngine", "vehicle_engine", "engineDescription"],
+  cpo: ["isCPO", "isOEMCPO", "certified", "isCertified", "vehicleCpo"],
+  marketValue: ["expectedPrice"], // CarGurus' market-value estimate
+  features: ["options", "features"],
   stock: ["stockNumber", "stockNo", "stock_no", "stockNum", "stock", "sku", "vehicleStockNumber", "vehicle_stocknum"],
   condition: ["condition", "itemCondition", "vehicleCondition", "newOrUsed", "stockType", "inventoryType"],
   isNew: ["isNew", "newCar", "isNewCar"],
@@ -124,6 +137,7 @@ function sellerOf(m) {
   // A nested dealer object's plain "name" is the dealer name; the listing's own "name" is the car.
   const name = first(K.sellerName) || first(["name"], true);
   const typeRaw = (first(K.sellerType) || "").toLowerCase();
+  const franchise = m.get("isfranchisedealer"); // CarGurus: true/false
   return {
     name,
     phone: first(K.sellerPhone),
@@ -133,8 +147,19 @@ function sellerOf(m) {
     zip: first(K.sellerZip),
     website: first(K.sellerWebsite, true),
     type: /private|fsbo|owner|individual/.test(typeRaw) ? "private"
-      : /franchise/.test(typeRaw) ? "franchise" : /independent/.test(typeRaw) ? "independent" : null,
+      : /franchise/.test(typeRaw) || franchise === true ? "franchise"
+      : /independent/.test(typeRaw) || franchise === false ? "independent" : null,
   };
+}
+
+// Short descriptive text only (a body style, a fuel type), never a page of HTML.
+const short = (v) => { const s = text(v); return s && s.length <= 60 ? s : null; };
+const yes = (v) => v === true || /^(true|yes|1)$/i.test(String(v ?? ""));
+// Feature names ("Leather Seats", "Sunroof/Moonroof"…), deduped, capped.
+function featureList(v) {
+  if (!Array.isArray(v)) return null;
+  const out = [...new Set(v.map((x) => text(x)).filter((s) => s && s.length <= 60))].slice(0, 40);
+  return out.length ? out : null;
 }
 
 /** Normalize one listing-like object into the common observation shape. */
@@ -171,7 +196,17 @@ export function normalizeObject(obj) {
     daysListed: days ?? (sinceDays != null ? Math.round(sinceDays) : null),
     url: urlOf(pick(m, K.url)),
     photo,
-    color: text(pick(m, K.color)),
+    color: short(pick(m, K.color)),
+    colorGroup: short(pick(m, K.colorGroup)),
+    intColor: short(pick(m, K.intColor)),
+    body: short(pick(m, K.body)),
+    drive: short(pick(m, K.drive)),
+    fuel: short(pick(m, K.fuel)),
+    trans: short(pick(m, K.trans)),
+    engine: short(pick(m, K.engine)),
+    cpo: yes(pick(m, K.cpo)) || null,
+    marketValue: toNumber(pick(m, K.marketValue)),
+    features: featureList(pick(m, K.features)),
     stock: text(pick(m, K.stock)),
     isNew: isNewFlag === true || /^new$|newcondition/.test(condition),
     distance: toNumber(pick(m, K.distance)),

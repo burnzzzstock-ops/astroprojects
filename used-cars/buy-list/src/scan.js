@@ -60,7 +60,7 @@ export async function runScan({
       try {
         const r = await fetchCarGurus(cfg, { context: await context(), log, debugDir, base: cargurusBase });
         obs.push(...r.listings);
-        scan.sources.cargurus = { ok: true, found: r.listings.length, pages: r.pages, truncated: r.truncated, method: r.method };
+        scan.sources.cargurus = { ok: true, found: r.listings.length, pages: r.pages, truncated: r.truncated, method: r.method, bands: r.bands };
       } catch (e) {
         scan.sources.cargurus = { ok: false, error: e.message.split("\n")[0] };
       }

@@ -3,6 +3,8 @@
 import { norm, daysSince, dealerKeyOf, zipDistance } from "./util.js";
 
 export const ACTIVE_DAYS = 3;   // still for sale if any source saw it this recently
+// Details kept for the filters (body style, drivetrain, …); any source can fill them in.
+const DETAIL_FIELDS = ["colorGroup", "intColor", "body", "drive", "fuel", "trans", "engine", "cpo", "marketValue", "features"];
 const PRUNE_DAYS = 45;          // forget never-called cars nobody has seen in this long
 
 const hasWords = (short, long) => (` ${long} `).includes(` ${short} `);
@@ -110,6 +112,7 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
       l = db.listings[key] = {
         key, vin: o.vin, year: o.year, make: o.make, model: o.model, trim: o.trim, title: o.title,
         color: o.color, stock: o.stock, photo: o.photo, miles: o.miles,
+        ...Object.fromEntries(DETAIL_FIELDS.map((f) => [f, o[f] ?? null])),
         price: o.price, firstPrice: pre ? o.prevPrice : o.price,
         priceDrops: pre ? 1 : 0, priceDropTotal: pre, lastDropAt: null, srcPrice: {},
         dealer: { ...o.dealer }, dealerKey, distance,
@@ -128,7 +131,7 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
         if (l.status === "working") l.nextCallDay = null; // a drop puts it back on today's list
         t.dropCount++;
       }
-      for (const f of ["vin", "year", "make", "model", "trim", "title", "color", "stock", "photo", "miles"]) {
+      for (const f of ["vin", "year", "make", "model", "trim", "title", "color", "stock", "photo", "miles", ...DETAIL_FIELDS]) {
         if (o[f] != null) l[f] = o[f];
       }
       if (o.price) l.price = o.price;

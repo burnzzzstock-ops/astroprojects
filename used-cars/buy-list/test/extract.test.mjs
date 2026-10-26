@@ -52,6 +52,22 @@ test("live CarGurus feed shape (2026-10): bare array, city with state, photo obj
   assert.equal(b.dealer.city, "Biloxi");
 });
 
+test("live CarGurus feed: the details the filters use (body, drivetrain, fuel, colors, CPO, market value, options, franchise)", () => {
+  const [l] = extractListings([{ id: 1, vin: "1FTEX1EP5JF000015", listingTitle: "2021 Ford F-150 XLT SuperCrew 4WD", makeName: "Ford", modelName: "F-150",
+    carYear: 2021, price: 32500, mileage: 57839, daysOnMarket: 249, bodyTypeName: "Pickup Truck", localizedDriveTrain: "Four-Wheel Drive",
+    localizedFuelType: "Gasoline", localizedTransmission: "10-Speed Automatic", localizedEngineDisplayName: "400 hp 3.5L V6",
+    exteriorColorName: "Oxford White", normalizedExteriorColor: "WHITE", localizedInteriorColor: "Black (Medium Earth Gray)",
+    isCPO: true, expectedPrice: 34100, options: ["Bluetooth", "Backup Camera", "Bluetooth"], isFranchiseDealer: true,
+    serviceProviderName: "Example Motors", sellerCity: "Gulfport, MS" }]);
+  assert.deepEqual([l.body, l.drive, l.fuel, l.trans, l.engine], ["Pickup Truck", "Four-Wheel Drive", "Gasoline", "10-Speed Automatic", "400 hp 3.5L V6"]);
+  assert.deepEqual([l.color, l.colorGroup, l.intColor], ["Oxford White", "WHITE", "Black (Medium Earth Gray)"]);
+  assert.equal(l.cpo, true);
+  assert.equal(l.marketValue, 34100);
+  assert.equal(l.price, 32500, "the market value isn't the price");
+  assert.deepEqual(l.features, ["Bluetooth", "Backup Camera"]);
+  assert.equal(l.dealer.type, "franchise");
+});
+
 test("DealerOn feed: Vehicle* fields, in-stock date, price from VehiclePriceLibrary when TaggingPrice is 0", () => {
   const lib = Buffer.from("MSRP:0.0;Selling Price:18873.0;reff_Flat Low Price:18873.0;calc_INTERNET PRICE:19822.0").toString("base64");
   const since = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10).replace(/-/g, "/");

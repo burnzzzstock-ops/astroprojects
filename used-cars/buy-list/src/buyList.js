@@ -2,6 +2,7 @@
 // Pure functions over the db object (the server wraps them with readDb/withDb).
 import { clamp01, money, localDay, csvCell, dealerKeyOf, zipDistance, zipForCity, daysSince, norm } from "./util.js";
 import { daysListed, isActive } from "./listings.js";
+import { matches, facetCounts, FACET_DEFS } from "./filters.js";
 
 // Call outcome → the car's status and how many days until it's due again.
 export const OUTCOMES = {
@@ -99,16 +100,18 @@ const byBest = (a, b) => b.tier - a.tier || b.score - a.score || b.days - a.days
 /**
  * Today's list: the top-N due cars by score, grouped by dealer (best first) so one
  * call covers every aged car on that lot; that dealer's other due cars ride along.
- * `top` is the best `topListSize` (10) of those as a plain ranked list.
- * Cars being negotiated are pinned separately.
+ * `top` is the best `topListSize` (10) of those as a plain ranked list. `filter` is the
+ * UCM's filter (src/filters.js); none = the store's default ranking over everything aged.
+ * Cars being negotiated are pinned separately (any filter).
  */
-export function buildCallList(db, cfg, now = Date.now()) {
+export function buildCallList(db, cfg, now = Date.now(), filter = {}) {
   const today = localDay(0, new Date(now));
   const hidden = db.hiddenDealers || {};
   const due = Object.values(db.listings)
     .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && (!l.nextCallDay || l.nextCallDay <= today))
     .filter((l) => eligible(l, cfg, now))
     .map((l) => view(l, cfg, now))
+    .filter((u) => matches(u, filter))
     .sort(byBest);
 
   const picked = due.slice(0, cfg.dailyListSize);
@@ -129,8 +132,19 @@ export function buildCallList(db, cfg, now = Date.now()) {
   return { today, top: due.slice(0, cfg.topListSize ?? 10), dealers: [...byDealer.values()], negotiating, dueTotal: due.length, laterCount: later };
 }
 
+// Every aged car still for sale (any status), dealer not hidden.
+const agedPool = (db, cfg, now) => Object.values(db.listings)
+  .filter((l) => !db.hiddenDealers[l.dealerKey] && eligible(l, cfg, now))
+  .map((l) => view(l, cfg, now));
+
+/** The filter panel: every category's options with counts, and how many cars match. */
+export function filterSummary(db, cfg, filter = {}, now = Date.now()) {
+  const pool = agedPool(db, cfg, now);
+  return { pool: pool.length, ...facetCounts(pool, filter), defs: FACET_DEFS };
+}
+
 /** Every aged car still for sale (any status), for "find me a Tacoma". */
-export function browseListings(db, cfg, { q = "", sort = "score", limit = 150 } = {}, now = Date.now()) {
+export function browseListings(db, cfg, { q = "", sort = "score", limit = 150, filter = {} } = {}, now = Date.now()) {
   const terms = String(q).toLowerCase().split(/\s+/).filter(Boolean);
   let rows = Object.values(db.listings)
     .filter((l) => !db.hiddenDealers[l.dealerKey] && eligible(l, cfg, now));
@@ -147,7 +161,7 @@ export function browseListings(db, cfg, { q = "", sort = "score", limit = 150 } 
     price: (a, b) => (a.price || Infinity) - (b.price || Infinity),
     distance: (a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity),
   }[sort] || byBest;
-  const scored = rows.map((l) => view(l, cfg, now)).sort(by);
+  const scored = rows.map((l) => view(l, cfg, now)).filter((u) => matches(u, filter)).sort(by);
   return { total: scored.length, rows: scored.slice(0, limit) };
 }
 

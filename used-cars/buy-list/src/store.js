@@ -14,6 +14,7 @@ const EMPTY = () => ({
   calls: [],          // call log
   scans: [],          // most recent first
   hiddenDealers: {},  // dealerKey → name
+  csvDealers: {},     // dealerKey → { name, city, state } for dealers.csv rows (the names other sources map onto)
   marketcheckCalls: {}, // "YYYY-MM" → API calls used
 });
 

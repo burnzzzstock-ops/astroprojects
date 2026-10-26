@@ -5,6 +5,28 @@ import { norm, daysSince, dealerKeyOf, zipDistance } from "./util.js";
 export const ACTIVE_DAYS = 3;   // still for sale if any source saw it this recently
 const PRUNE_DAYS = 45;          // forget never-called cars nobody has seen in this long
 
+const hasWords = (short, long) => (` ${long} `).includes(` ${short} `);
+
+/**
+ * The dealer card a car belongs on. dealers.csv names are the reference: when
+ * CarGurus calls a store "Matt Bowers Nissan" and dealers.csv says "Matt Bowers
+ * Nissan of South Mississippi", the car goes on the dealers.csv card (one name
+ * inside the other, 2+ words, same state; city breaks a tie, ambiguity = no merge).
+ */
+export function resolveDealerKey(db, dealer, listingKeyValue) {
+  const k = dealerKeyOf(dealer, listingKeyValue);
+  if (k.startsWith("private:")) return k;
+  const known = db.csvDealers || {};
+  if (known[k]) return k;
+  const st = String(dealer?.state || "").toUpperCase();
+  let cands = Object.entries(known).filter(([ck, d]) => {
+    const [short, long] = ck.length < k.length ? [ck, k] : [k, ck];
+    return short.split(" ").length >= 2 && hasWords(short, long) && (!st || !d.state || String(d.state).toUpperCase() === st);
+  });
+  if (cands.length > 1 && dealer?.city) cands = cands.filter(([, d]) => norm(d.city) === norm(dealer.city));
+  return cands.length === 1 ? cands[0][0] : k;
+}
+
 export const listingKey = (o) =>
   o.vin || `${o.source}:${o.sourceId || `${norm(o.title)}|${o.price ?? ""}|${o.miles ?? ""}`}`;
 
@@ -33,13 +55,23 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
   const at = now.toISOString();
   const frags = (cfg.excludeSellers || []).map(norm).filter(Boolean);
   const t = { kept: 0, excluded: 0, newCount: 0, dropCount: 0 };
-  for (const o of observations) {
+  db.csvDealers ||= {};
+  // dealers.csv sightings first, so other sources' names can map onto those dealers.
+  const ordered = [...observations].sort((a, b) => (b.source === "dealer") - (a.source === "dealer"));
+  for (const o of ordered) {
+    if (o.source === "dealer" && o.dealer?.name) {
+      db.csvDealers[dealerKeyOf(o.dealer, "")] = { name: o.dealer.name, city: o.dealer.city || null, state: o.dealer.state || null };
+    }
+  }
+  for (const o of ordered) {
     if (o.isNew) continue;
     const dealerName = norm(o.dealer?.name);
     if (dealerName && frags.some((f) => dealerName.includes(f))) { t.excluded++; continue; }
     const key = listingKey(o);
     const existing = db.listings[key];
-    const dealerKey = existing?.dealerKey || dealerKeyOf(o.dealer, key);
+    const dealerKey = existing && o.source !== "dealer" && !existing.dealerKey.startsWith("private:") && db.csvDealers[existing.dealerKey]
+      ? existing.dealerKey
+      : resolveDealerKey(db, o.dealer, key);
     if (db.hiddenDealers[dealerKey]) { t.excluded++; continue; }
     const distance = o.distance ?? zipDistance(cfg.zip, o.dealer?.zip);
     if (distance != null && distance > cfg.radiusMiles + 5) { t.excluded++; continue; }
@@ -74,6 +106,7 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
       }
       if (o.price) l.price = o.price;
       if (o.dealRating) l.dealRating = o.dealRating;
+      l.dealerKey = dealerKey;
       if (distance != null) l.distance = distance;
       // Fill in any dealer details we didn't have; dealers.csv (source "dealer") wins outright.
       for (const [k, v] of Object.entries(o.dealer || {})) {

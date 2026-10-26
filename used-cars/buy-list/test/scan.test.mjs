@@ -86,6 +86,15 @@ before(async () => {
     <button id="more">Load more</button>
     <script>document.getElementById('more').onclick = () => { document.getElementById('list').insertAdjacentHTML('beforeend', ${JSON.stringify(card(3) + card(4))}); document.getElementById('more').remove(); };</script>
     </body></html>`));
+  // dealer 5: only the homepage is known; the tool must find "Used Vehicles" itself
+  app.get("/dealer5/", (req, res) => res.send(`<html><body><nav>
+    <a href="/dealer5/new-inventory">New Inventory</a> <a href="https://www.cars.com/shopping/used">Used cars on Cars.com</a>
+    <a href="/dealer5/used-vehicles/">Used Vehicles</a> <a href="/dealer5/service">Service</a></nav>
+    <script type="application/ld+json">${JSON.stringify({ "@type": "Car", name: "2026 Kia Sorento", vehicleIdentificationNumber: vin("D5", 9), offers: { price: 36000 }, itemCondition: "https://schema.org/NewCondition" })}</script>
+    </body></html>`));
+  app.get("/dealer5/used-vehicles/", (req, res) => res.send(`<html><body>
+    <script type="application/ld+json">${JSON.stringify([1, 2].map((i) => ({ "@type": "Car", name: `2017 Kia Sorento LX`, vehicleIdentificationNumber: vin("D5", i), mileageFromOdometer: { value: 90000 + i }, offers: { price: 14000 + i } })))}</script>
+    </body></html>`));
   app.get("/broken", (req, res) => res.status(500).send("down"));
   await new Promise((r) => { server = app.listen(0, "127.0.0.1", r); });
   base = `http://127.0.0.1:${server.address().port}`;
@@ -96,6 +105,7 @@ before(async () => {
     `"Smith, Jones Motors",(228) 555-0121,Biloxi,MS,39530,${base}/dealer2/used`,
     `Placeholder Cars,(985) 555-0122,Slidell,LA,70458,${base}/dealer3/used`,
     `Broken Site Auto,(228) 555-0123,Gulfport,MS,39501,${base}/broken`,
+    `Homepage Only Kia,(228) 555-0124,Gulfport,MS,39503,${base}/dealer5/`,
   ].join("\n"));
   config.sources.dealerSites.file = csv;
 });
@@ -125,8 +135,8 @@ test("full scan: all three sources, merged, ranked", async () => {
   assert.equal(s.marketcheck.apiCalls, 1);
 
   assert.ok(s.dealerSites.ok);
-  assert.equal(s.dealerSites.dealerCount, 4);
-  assert.equal(s.dealerSites.dealersOk, 3);
+  assert.equal(s.dealerSites.dealerCount, 5);
+  assert.equal(s.dealerSites.dealersOk, 4);
   assert.equal(s.dealerSites.failed[0].name, "Broken Site Auto");
 
   const db = readDb();
@@ -142,6 +152,9 @@ test("full scan: all three sources, merged, ranked", async () => {
   // dealer 3: plain HTML, including the cards behind "Load more"
   assert.equal(Object.values(L).filter((l) => l.dealer.name === "Placeholder Cars").length, 4);
   assert.equal(L[vin("D3", 3)].price, 13500);
+  // dealer 5: found "Used Vehicles" from the homepage (not the new car, not the off-site link)
+  const d5 = Object.values(L).filter((l) => l.dealer.name === "Homepage Only Kia");
+  assert.deepEqual(d5.map((l) => l.vin).sort(), [vin("D5", 1), vin("D5", 2)]);
   // same car on CarGurus + Marketcheck = one record seen by both
   assert.deepEqual(Object.keys(L[vin("CG", 0)].seen).sort(), ["cargurus", "marketcheck"]);
   assert.equal(db.marketcheckCalls[new Date().toISOString().slice(0, 7)], 1);

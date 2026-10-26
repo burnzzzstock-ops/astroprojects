@@ -6,7 +6,8 @@ import { isolate } from "./helpers.mjs";
 
 isolate();
 const { extractListings, parseJsonLoose, normalizeObject } = await import("../src/extract.js");
-const { toNumber, parseCsv, dealerKeyOf } = await import("../src/util.js");
+const { toNumber, parseCsv, dealerKeyOf, zipForCity } = await import("../src/util.js");
+const { isHomepage } = await import("../src/sources/dealerSites.js");
 
 test("CarGurus-style feed: price, miles, days listed, seller, distance, deal rating", () => {
   const feed = {
@@ -97,4 +98,20 @@ test("helpers: money parsing, JSON guards, CSV, dealer keys", () => {
   assert.equal(dealerKeyOf({ name: "Example Motors LLC" }, "k1"), dealerKeyOf({ name: "Example Motors" }, "k2"));
   assert.equal(dealerKeyOf({ name: "Private Seller" }, "k3"), "private:k3");
   assert.notEqual(dealerKeyOf({ type: "private", name: "Bob" }, "a"), dealerKeyOf({ type: "private", name: "Bob" }, "b"));
+});
+
+test("homepage vs inventory links in dealers.csv", () => {
+  assert.equal(isHomepage("https://www.example-motors.com/"), true);
+  assert.equal(isHomepage("https://example-motors.com"), true);
+  assert.equal(isHomepage("https://www.example-motors.com/used-inventory/index.htm"), false);
+  assert.equal(isHomepage("https://www.example-motors.com/searchused.aspx"), false);
+  assert.equal(isHomepage("https://www.example-motors.com/inventory"), false);
+  assert.equal(isHomepage("https://www.example-motors.com/pre-owned/"), false);
+});
+
+test("ZIP from city/state when a dealer row has none", () => {
+  assert.equal(zipForCity("D'Iberville", "MS"), "39540");
+  assert.equal(zipForCity("Bay St. Louis", "MS"), "39520");
+  assert.equal(zipForCity("Hattiesburg", "ms"), "39401");
+  assert.equal(zipForCity("Nowhere Town", "MS"), null);
 });

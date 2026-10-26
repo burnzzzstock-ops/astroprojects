@@ -2,7 +2,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Buy List: per-PC settings (may hold a key/PIN), the dealer list, and its data
+# Buy List: per-PC settings (may hold a key/PIN) and its data
 used-cars/buy-list/config.json
-used-cars/buy-list/dealers.csv
 used-cars/buy-list/data/

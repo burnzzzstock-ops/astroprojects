@@ -20,7 +20,7 @@ department/project. Read this first in any new session.
 The used car manager's daily call sheet: used cars for sale within 100 mi of 39540 listed
 60+ days, ranked, grouped by dealer, with call outcomes tracked. Node 20+, runs locally
 (`npm start` → http://localhost:4400). Windows install is `setup.bat`, which runs npm install,
-`npx playwright install chromium`, copies config/dealers templates, adds a Startup shortcut to
+`npx playwright install chromium`, copies the config template, adds a Startup shortcut to
 `start.bat` (restart loop) and a desktop `.url` link.
 
 - **Storage:** one JSON file, `data/buylist.json` (`src/store.js`), with no native deps. Every write
@@ -38,7 +38,13 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
     when nothing is read. Automated use is against CarGurus' terms (the operator chose it knowingly).
     **Untested against the live site** (the dev sandbox can't reach it); the operator runs it and
     sends debug files.
-  - `dealerSites.js`: one page per `dealers.csv` row. Reads JSON responses, JSON-LD and
+  - `dealerSites.js`: one page per `dealers.csv` row. `dealers.csv` is TRACKED and was pre-filled
+    on 2026-10-26 with 98 dealers within 100 mi, researched by web search only (URLs/phones seen
+    in results, never fetched; 46 rows are homepages). Gaps: Baldwin County AL, Mandeville /
+    Hammond / New Orleans metro, Mobile and Hancock County independents. A missing zip falls back
+    to `zipForCity(city, state)` for distance. A homepage link (`isHomepage`) is resolved
+    to the site's used-inventory page via `findUsedLink` (same-site links scored on used/pre-owned
+    text, with new/service/etc. penalized). Reads JSON responses, JSON-LD and
     `script[type=application/json]`, then a DOM fallback (VINs printed on the page; climbs to the
     single-VIN card; skips script/style tags). Scrolls, then clicks next/load-more, with `settle()`
     waiting for the page to go quiet. CSV contact info overrides scraped dealer info; distance
@@ -49,7 +55,10 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   no I/O/Q, or price + year + name + miles) and reads each field from an alias list (daysOnMarket,
   inStockDate, serviceProviderName, phoneNumberString, JSON-LD offers/seller/address…). One
   extractor serves every site, so a renamed field means adding an alias, not a rewrite.
-- **Merge** (`src/listings.js`): keyed by VIN (else `source:id`). Days listed = max(each source's
+- **Merge** (`src/listings.js`): keyed by VIN (else `source:id`). Dealer cards: `resolveDealerKey`
+  maps other sources' names onto `db.csvDealers` (the dealers.csv names). It merges when one
+  normalized name contains the other (2+ words) and the state matches, with city as the
+  tie-breaker; anything ambiguous stays separate. Dealer-source rows are applied first in each scan. Days listed = max(each source's
   reported days aged forward from when it said so, days since we first saw the car). Price drops
   are detected per source against that same source only (≥$100), so two sites with different
   prices never look like a drop. A provider's previous price on first sight counts as one drop.

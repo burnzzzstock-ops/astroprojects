@@ -32,6 +32,17 @@ export function zipDistance(a, b) {
   return Number.isFinite(d) ? d : null;
 }
 
+// A ZIP for "City, ST" when a dealer row has none (for distance only).
+export function zipForCity(city, state) {
+  if (!city || !state) return null;
+  const c = String(city).trim();
+  for (const name of [c, c.replace(/[^a-z ]/gi, ""), c.replace(/\bSt\.?\s/i, "Saint ")]) {
+    const hit = zipcodes.lookupByName(name, String(state).trim().toUpperCase())[0];
+    if (hit) return hit.zip;
+  }
+  return null;
+}
+
 const SUFFIX = /\b(llc|inc|incorporated|co|corp|corporation|ltd|the)\b/g;
 
 // One key per dealership across sources ("Example Motors LLC" == "Example Motors").

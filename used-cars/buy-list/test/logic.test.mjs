@@ -171,3 +171,25 @@ test("long-gone cars nobody called are pruned; called ones are kept", () => {
   assert.ok(!db.listings[a.key]);
   assert.ok(db.listings[b.key]);
 });
+
+test("other sources' dealer names land on the dealers.csv dealer's card", () => {
+  const db = freshDb();
+  const csv = (i, name, city, state) => obs(i, { source: "dealer", dealer: { name, city, state, zip: null } });
+  applyObservations(db, [
+    obs(10, { dealer: { name: "Matt Bowers Nissan", city: "D'Iberville", state: "MS" } }), // CarGurus, same scan
+    csv(11, "Matt Bowers Nissan of South Mississippi", "D'Iberville", "MS"),
+    csv(12, "Matt Bowers Hyundai Gulfport", "Gulfport", "MS"),
+    csv(13, "Matt Bowers Hyundai Slidell", "Slidell", "LA"),
+    obs(14, { dealer: { name: "Matt Bowers Hyundai", city: "Gulfport", state: "MS" } }),
+    obs(15, { dealer: { name: "Matt Bowers Hyundai", city: "Slidell", state: null } }),
+    obs(16, { dealer: { name: "Matt Bowers Hyundai", city: null, state: null } }),
+    obs(17, { dealer: { name: "Toyota", city: null, state: "MS" } }),
+  ], config);
+  const key = (i) => db.listings[obs(i).vin].dealerKey;
+  assert.equal(key(10), key(11), "short CarGurus name maps onto the dealers.csv name");
+  assert.equal(key(14), key(12), "state picks the Mississippi store");
+  assert.equal(key(15), key(13), "city breaks the tie");
+  assert.notEqual(key(16), key(12), "ambiguous: no merge");
+  assert.notEqual(key(16), key(13));
+  assert.equal(key(17), "toyota", "one-word names never merge");
+});

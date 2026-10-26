@@ -21,7 +21,6 @@ if errorlevel 1 (
 echo Downloading the browser it uses to read listings...
 call npx playwright install chromium
 if not exist config.json copy config.example.json config.json >nul
-if not exist dealers.csv copy dealers.example.csv dealers.csv >nul
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0windows\install-shortcuts.ps1"
 echo.
 echo Done. The Buy List now starts on its own when you log in to this PC,

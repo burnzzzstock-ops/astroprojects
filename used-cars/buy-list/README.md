@@ -10,9 +10,10 @@ no paid services, no hosting, no logins.
 - **Scans three free sources at 6:00 AM (Mon-Sat):**
   - **CarGurus** shows how many days every car has been listed. The tool reads it
     oldest-listed first within 100 miles.
-  - **Dealer websites** you list in `dealers.csv`. Most don't show days listed, so
-    the tool counts from the first day it sees each car (and uses an in-stock date
-    when a site publishes one).
+  - **Dealer websites** in `dealers.csv`, which comes filled in with 98 dealers
+    within about 100 miles (see below). Most don't show days listed, so the tool
+    counts from the first day it sees each car (and uses an in-stock date when a
+    site publishes one).
   - **Marketcheck free tier** (optional): $0, no credit card, ~500 lookups a month.
     It's skipped unless you add a free key.
 - **One record per car.** The same VIN on several sources is merged, and "days
@@ -27,7 +28,8 @@ no paid services, no hosting, no logins.
   morning showing the drop since your call.
 - **Phone-friendly page** with tap-to-call, a CSV download for Excel, and print.
 
-Leave it running and the scan happens by itself. If the PC was off or asleep at
+Leave it running and the scan happens by itself. With ~100 dealer sites, the
+morning scan takes roughly 30-60 minutes; the list updates when it finishes. If the PC was off or asleep at
 6:00, it scans as soon as the PC is back on.
 
 ## Setup (Windows, one time)
@@ -40,20 +42,25 @@ Leave it running and the scan happens by itself. If the PC was off or asleep at
    on the desktop, and opens the page.
 4. Open **`config.json`** in Notepad and check `excludeSellers`: your own store's
    name has to be in there so your lot isn't on the list.
-5. Add dealers to **`dealers.csv`** (Excel or Notepad), one per row, linking to their
-   **used inventory** page:
+5. Look over **`dealers.csv`** (Excel or Notepad). It comes with 98 dealers within
+   about 100 miles (Gulf Coast, Pascagoula/Picayune/Lucedale, Mobile,
+   Hattiesburg/Laurel, Slidell/Covington), found by web search on 2026-10-26.
+   **Not covered yet:** Baldwin County AL (Daphne, Fairhope, Foley), Mandeville,
+   Hammond and the New Orleans metro, and most independent lots in Mobile and
+   Hancock County. Some phones are call-tracking numbers. Delete lots you'd never
+   buy from and add any that are missing, one per row:
 
    ```csv
-   name,phone,city,state,zip,used_inventory_url
-   Example Motors,(228) 555-0100,Gulfport,MS,39501,https://www.example-motors.com/used-inventory
+   name,phone,city,state,zip,used_inventory_url,type
+   Example Motors,(228) 555-0100,Gulfport,MS,39501,https://www.example-motors.com/,independent
    ```
 
-   Start with the lots you'd actually buy from. The zip is used to work out the
-   distance.
+   The link can be the dealer's homepage: the tool finds their "Used / Pre-Owned"
+   inventory page on its own. The zip is used to work out the distance.
 
 **Mac:** install Node.js LTS, then in Terminal from this folder run `npm install`,
-`npx playwright install chromium`, `cp config.example.json config.json`,
-`cp dealers.example.csv dealers.csv`, and `npm start`. Open http://localhost:4400.
+`npx playwright install chromium`, `cp config.example.json config.json`, and
+`npm start`. Open http://localhost:4400.
 
 ## Daily use
 

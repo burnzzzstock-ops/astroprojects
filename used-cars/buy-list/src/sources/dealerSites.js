@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import { extractListings, parseJsonLoose, normalizeObject } from "../extract.js";
 import { collectJson, embeddedJson, looksBlocked, settle, friendlyNetError } from "../browser.js";
-import { parseCsv, sleep, zipDistance } from "../util.js";
+import { parseCsv, sleep, zipDistance, zipForCity } from "../util.js";
 import { saveDebug } from "./cargurus.js";
 
 export function readDealers(file) {
@@ -90,6 +90,43 @@ async function clickMore(page) {
   return false;
 }
 
+// A dealers.csv link that's just the homepage ("https://www.dealer.com/") rather
+// than an inventory page: we'll find the used-inventory link on it ourselves.
+export function isHomepage(url) {
+  try {
+    const p = new URL(url).pathname.toLowerCase();
+    return /^\/?[^/]*\/?$/.test(p) && !/used|inventory|vehicle|pre-?owned|search|cars|stock|index/.test(p);
+  } catch {
+    return false;
+  }
+}
+
+// Best "Used / Pre-Owned inventory" link on the page (same site only), or null.
+async function findUsedLink(page) {
+  return page.evaluate(() => {
+    const here = location.hostname.replace(/^www\./, "");
+    const root = here.split(".").slice(-2).join(".");
+    let best = null, bestScore = 5;
+    for (const a of document.querySelectorAll("a[href]")) {
+      let u;
+      try { u = new URL(a.getAttribute("href"), location.href); } catch { continue; }
+      if (!/^https?:$/.test(u.protocol) || !u.hostname.replace(/^www\./, "").endsWith(root)) continue;
+      const t = `${a.innerText || a.textContent || ""} ${a.getAttribute("aria-label") || ""}`.toLowerCase().replace(/\s+/g, " ").trim();
+      const h = (u.pathname + u.search).toLowerCase();
+      if (!/used|pre-?owned|preowned/.test(t + " " + h)) continue;
+      let s = 0;
+      if (/^(shop |view |all |search )?(used|pre-?owned)( inventory| vehicles| cars( (&|and) trucks)?)?$/.test(t)) s += 10;
+      if (/used|pre-?owned/.test(t)) s += 5;
+      if (/inventory|vehicles|cars|search|shop/.test(t)) s += 2;
+      if (/used|pre-?owned|preowned/.test(h)) s += 4;
+      if (/inventory|vehicles|search|cars/.test(h)) s += 1;
+      if (/\bnew\b|certified|cpo|specials?|sell|trade|value|financ|service|parts/.test(t)) s -= 4;
+      if (s > bestScore) { best = u.href; bestScore = s; }
+    }
+    return best;
+  });
+}
+
 export async function scrapeDealer(context, dealer, { maxPages = 8, delay = 1500, log = () => {}, debugDir } = {}) {
   const page = await context.newPage();
   const sink = [];
@@ -116,7 +153,20 @@ export async function scrapeDealer(context, dealer, { maxPages = 8, delay = 1500
     }
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     await settle(page);
-    await harvest();
+    // Given a homepage (or a page with no cars), hop to its used-inventory page first.
+    const home = isHomepage(dealer.url);
+    if (!home) await harvest();
+    if (home || !found.size) {
+      const used = await findUsedLink(page);
+      if (used && used !== page.url()) {
+        log(`dealer site ${dealer.name}: using ${used}`);
+        sink.length = 0;
+        await page.goto(used, { waitUntil: "domcontentloaded", timeout: 60000 }).catch(() => {});
+        await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+        await settle(page);
+      }
+      await harvest();
+    }
     for (let p = 1; p < maxPages; p++) {
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); // infinite-scroll sites
       await settle(page);
@@ -149,7 +199,7 @@ export async function fetchDealerSites(cfg, { context, log = () => {}, debugDir,
       const rows = await scrapeDealer(context, d, { maxPages: s.maxPagesPerDealer, delay: s.pageDelayMs, log, debugDir });
       if (!rows.length) { failed.push({ name: d.name, error: "no cars found on the page" }); continue; }
       ok++;
-      const distance = zipDistance(cfg.zip, d.zip);
+      const distance = zipDistance(cfg.zip, d.zip || zipForCity(d.city, d.state));
       for (const l of rows) {
         let url = null;
         try { url = l.url ? new URL(l.url, d.url).href : null; } catch { /* unparseable link */ }

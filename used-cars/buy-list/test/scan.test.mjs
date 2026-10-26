@@ -195,6 +195,40 @@ test("CarGurus blocked: clear error + debug files saved", async () => {
   }
 });
 
+test("dealer pages with no data feed: 'VIN:' label cards, and VIN-less cards read by their detail link", async () => {
+  const { scrapeDealer } = await import("../src/sources/dealerSites.js");
+  const app = express();
+  // DealerCarSearch-style: <p><label>VIN:</label>&nbsp;VIN</p> (the VIN isn't in a leaf element)
+  const dcs = (i) => `<div class="car"><h3>201${i} Buick LaCrosse Premium</h3><p class="optVin"><label>VIN:</label>&nbsp;${vin("D6", i)}</p>
+    <p>Price: $6,4${i}5</p><p>Mileage: 12${i},000</p><a href="/dcs/vdp/${i}">Details</a></div>`;
+  app.get("/dcs/used", (req, res) => res.send(`<html><body>${dcs(1)}${dcs(2)}</body></html>`));
+  // Carsforsale.com-style: JSON-LD without VIN/miles, cards with title/price/mileage, VIN only on the detail page
+  const cfs = (id, title, price) => `<script type="application/ld+json">${JSON.stringify({ "@type": "Vehicle", name: title, offers: { price: 1 } })}</script>
+    <li class="vehicle-snapshot"><a href="/cfs/details/used-${title.toLowerCase().replace(/ /g, "-")}/${id}"><img alt=""></a>
+    <h4><a href="/cfs/details/used-${title.toLowerCase().replace(/ /g, "-")}/${id}">${title}</a></h4>
+    <div>Price ${price}</div><div>Mileage 9${id % 10},207</div></li>`;
+  app.get("/cfs/cars-for-sale", (req, res) => res.send(`<html><body><nav><a href="/cfs/specials-2026">2026 Specials</a></nav><ul>
+    ${cfs(130022651, "2018 Chevrolet Express 2500", "$17,760")}${cfs(130022652, "2015 Scion xB Wagon", "$11,995")}${cfs(130022653, "2014 Toyota Sienna L", "Sold")}
+    </ul></body></html>`));
+  const srv = await new Promise((r) => { const s = app.listen(0, "127.0.0.1", () => r(s)); });
+  const b = `http://127.0.0.1:${srv.address().port}`;
+  const { browser, context } = await launchBrowser();
+  try {
+    const a = await scrapeDealer(context, { name: "Placeholder Auto", url: `${b}/dcs/used` }, { maxPages: 1, delay: 0 });
+    assert.deepEqual(a.map((l) => l.vin).sort(), [vin("D6", 1), vin("D6", 2)]);
+    assert.equal(a.find((l) => l.vin === vin("D6", 1)).price, 6415);
+    assert.equal(a.find((l) => l.vin === vin("D6", 1)).miles, 121000);
+    const c = await scrapeDealer(context, { name: "Fictional Cars", url: `${b}/cfs/cars-for-sale` }, { maxPages: 1, delay: 0 });
+    assert.equal(c.length, 2, "two for sale; the sold one and the nav link are skipped");
+    const x = c.find((l) => l.price === 17760);
+    assert.deepEqual([x.year, x.make, x.model, x.miles, x.vin], [2018, "Chevrolet", "Express", 91207, null]);
+    assert.equal(x.sourceId, `${b}/cfs/details/used-2018-chevrolet-express-2500/130022651`);
+  } finally {
+    await browser.close();
+    srv.close();
+  }
+});
+
 test("a dealer site that never finishes loading is dropped, not waited on forever", async () => {
   const { fetchDealerSites } = await import("../src/sources/dealerSites.js");
   const app = express();

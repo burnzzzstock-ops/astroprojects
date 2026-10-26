@@ -36,8 +36,14 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
     page's newest car is under `minDaysListed`, but only while the site actually honors the sort
     (`makeAgeGate`). It detects bot walls (`looksBlocked`) and saves html/png/json to `data/debug`
     when nothing is read. Automated use is against CarGurus' terms (the operator chose it knowingly).
-    **Untested against the live site** (the dev sandbox can't reach it); the operator runs it and
-    sends debug files.
+    **Live-tested 2026-10-26 on the store PC:** the feed (A) works with no bot wall. It returns a bare
+    JSON array, 48 cars per page; the sort is honored, so a full read stops by itself at the 60-day
+    line after ~142 pages / ~6,800 cars in ~10 min (hence `maxPages` 150). `daysOnMarket` checks out
+    against listing ids (they rise ~86k/day at every age). Field notes: photo is
+    `originalPictureData.url`; `sellerCity` is "Gulfport, MS" (the extractor strips the state);
+    `expectedPrice` is CarGurus' market-value estimate, NOT the asking price, so it isn't a price
+    alias. CarGurus' detail pages sit behind DataDome (a captcha in a normal browser); the feed
+    wasn't challenged.
   - `dealerSites.js`: one page per `dealers.csv` row. `dealers.csv` is TRACKED and pre-filled
     (2026-10-26) with 313 dealers within 98 mi (MS 111, AL 98, LA 104), sorted closest-first. They
     were researched by web search only: URLs and phones were seen in results but never fetched, and
@@ -48,20 +54,33 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
     store's site, so cars get attributed to whichever row read them last. A homepage link (`isHomepage`) is resolved
     to the site's used-inventory page via `findUsedLink` (same-site links scored on used/pre-owned
     text, with new/service/etc. penalized). Reads JSON responses, JSON-LD and
-    `script[type=application/json]`, then a DOM fallback (VINs printed on the page; climbs to the
-    single-VIN card; skips script/style tags). Scrolls, then clicks next/load-more, with `settle()`
-    waiting for the page to go quiet. CSV contact info overrides scraped dealer info; distance
-    comes from the zip via the free `zipcodes` table.
+    `script[type=application/json]`, then a DOM fallback: (1) VINs printed on the page, starting
+    from the smallest element holding both "VIN" and the number (a leaf, or
+    `<p><label>VIN:</label> 1FT…</p>` as on DealerCarSearch `/newandusedcars` sites), climbing to the
+    single-VIN card; (2) if no VINs at all (Carsforsale.com `/cars-for-sale` keeps the VIN on the
+    detail page), one car per same-site detail link with a model year in its path, keyed by that
+    link. Cards marked sold with no price are skipped. Scrolls, then clicks next/load-more, with
+    `settle()` waiting for the page to go quiet. CSV contact info overrides scraped dealer info;
+    distance comes from the zip via the free `zipcodes` table.
+    **Live run 2026-10-26:** Dealer Inspire sites (Cloudflare, "Sorry, you have been blocked") and
+    Dealer.com sites (Akamai, "Access Denied") answer the headless browser with HTTP 403. That's
+    a deliberate bot block, so it's reported, not worked around. `looksBlocked` reads only the title,
+    the visible text and wall-vendor markup (`captcha-delivery.com`, Incapsula, PerimeterX):
+    reading raw HTML flagged normal pages that load reCAPTCHA or a "captcha-field" widget. A
+    blocked site saves `dealer-<name>-blocked-*.html/png` to `data/debug`.
   - `marketcheck.js`: v2 `/search/car/active`, FREE tier only (key optional). `dom_range`
     filter, 50 rows per call, `start` = offset. Monthly cap tracked in `db.marketcheckCalls[YYYY-MM]`.
 - **Generic extractor** (`src/extract.js`): walks any JSON for listing-like objects (valid VIN with
   no I/O/Q, or price + year + name + miles) and reads each field from an alias list (daysOnMarket,
   inStockDate, serviceProviderName, phoneNumberString, JSON-LD offers/seller/address…). One
   extractor serves every site, so a renamed field means adding an alias, not a rewrite.
+  `inventoryDate` (space.auto dealer sites) counts as an in-stock date.
 - **Merge** (`src/listings.js`): keyed by VIN (else `source:id`). Dealer cards: `resolveDealerKey`
   maps other sources' names onto `db.csvDealers` (the dealers.csv names). It merges when one
   normalized name contains the other (2+ words) and the state matches, with city as the
-  tie-breaker; anything ambiguous stays separate. Dealer-source rows are applied first in each scan. Days listed = max(each source's
+  tie-breaker; anything ambiguous stays separate. Dealer-source rows are applied first in each scan.
+  A VIN-less dealer-site car and a VIN'd car from another source on the same dealer card with the
+  same year, make and exact miles are one record (re-keyed to the VIN). Days listed = max(each source's
   reported days aged forward from when it said so, days since we first saw the car). Price drops
   are detected per source against that same source only (≥$100), so two sites with different
   prices never look like a drop. A provider's previous price on first sight counts as one drop.
@@ -84,9 +103,11 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
 - **Page** (`public/index.html`): dark, phone-first, tap-to-call. Buttons reference cars by index
   (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all
   text is escaped.
-- **Tests:** `npm test` (node --test, 29 tests, offline). `test/scan.test.mjs` runs a real headless
+- **Tests:** `npm test` (node --test, 33 tests, offline). `test/scan.test.mjs` runs a real headless
   browser against an Express server that copies each site shape: CarGurus feed (400 cars,
   oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,
-  dealer API + Next, JSON-LD, plain HTML + Load more, and a broken site.
+  dealer API + Next, JSON-LD, plain HTML + Load more, "VIN:" label cards, VIN-less
+  Carsforsale-style cards, and a broken site. `test/extract.test.mjs` includes the live CarGurus
+  feed shape and bot-wall vs reCAPTCHA pages.
 - **Next ideas:** list dealers seen on CarGurus that aren't in dealers.csv yet; an
   offer-range hint from comparable cars in the data.

@@ -63,15 +63,30 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
       db.csvDealers[dealerKeyOf(o.dealer, "")] = { name: o.dealer.name, city: o.dealer.city || null, state: o.dealer.state || null };
     }
   }
+  // A car read off a dealer site with no VIN (keyed by its link) and the same car with a
+  // VIN from another source are one car: same dealer card, year, make and exact miles.
+  const twinKey = (dk, x) => (x.year && x.make && x.miles ? `${dk}|${x.year}|${norm(x.make)}|${x.miles}` : null);
+  const twins = new Map();
+  for (const l of Object.values(db.listings)) {
+    const tk = twinKey(l.dealerKey, l);
+    if (tk) twins.set(tk, l);
+  }
   for (const o of ordered) {
     if (o.isNew) continue;
     const dealerName = norm(o.dealer?.name);
     if (dealerName && frags.some((f) => dealerName.includes(f))) { t.excluded++; continue; }
     const key = listingKey(o);
-    const existing = db.listings[key];
+    let existing = db.listings[key];
     const dealerKey = existing && o.source !== "dealer" && !existing.dealerKey.startsWith("private:") && db.csvDealers[existing.dealerKey]
       ? existing.dealerKey
       : resolveDealerKey(db, o.dealer, key);
+    if (!existing) {
+      const twin = twins.get(twinKey(dealerKey, o));
+      if (twin && !twin.vin !== !o.vin) {
+        existing = twin;
+        if (o.vin) { delete db.listings[twin.key]; twin.key = key; db.listings[key] = twin; } // VIN wins as the key
+      }
+    }
     if (db.hiddenDealers[dealerKey]) { t.excluded++; continue; }
     const distance = o.distance ?? zipDistance(cfg.zip, o.dealer?.zip);
     if (distance != null && distance > cfg.radiusMiles + 5) { t.excluded++; continue; }
@@ -118,6 +133,8 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
     if (o.daysListed != null) l.reported[o.source] = { days: o.daysListed, at };
     l.seen[o.source] = at;
     l.lastSeenAt = at;
+    const tk = twinKey(l.dealerKey, l);
+    if (tk) twins.set(tk, l);
     t.kept++;
   }
   // Keep the file small: drop cars long gone that nobody ever called about.

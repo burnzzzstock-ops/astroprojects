@@ -8,6 +8,7 @@ isolate();
 const { extractListings, parseJsonLoose, normalizeObject } = await import("../src/extract.js");
 const { toNumber, parseCsv, dealerKeyOf, zipForCity } = await import("../src/util.js");
 const { isHomepage } = await import("../src/sources/dealerSites.js");
+const { looksBlocked } = await import("../src/browser.js");
 
 test("CarGurus-style feed: price, miles, days listed, seller, distance, deal rating", () => {
   const feed = {
@@ -30,6 +31,25 @@ test("CarGurus-style feed: price, miles, days listed, seller, distance, deal rat
   assert.equal(l.distance, 9);
   assert.equal(l.dealRating, "GOOD_PRICE");
   assert.equal(l.sourceId, "402358133");
+});
+
+test("live CarGurus feed shape (2026-10): bare array, city with state, photo object, expectedPrice isn't the price", () => {
+  const feed = [
+    { id: 457065290, vin: "1FTEX1EP5JF000011", listingTitle: "2008 Lexus LS 460 L RWD", makeName: "Lexus", modelName: "LS",
+      carYear: 2008, price: 12998, expectedPrice: 11800, mileage: 140000, daysOnMarket: 61, sellerType: "DEALER",
+      sellerCity: "Gulfport, MS", sellerRegion: "MS", sellerPostalCode: "39501", serviceProviderName: "Example Motors",
+      phoneNumberString: "(228) 555-0111", originalPictureData: { url: "https://static.example.com/p-1024x768.jpg" } },
+    { id: 457065291, vin: "1FTEX1EP5JF000012", listingTitle: "2016 Ford Fusion SE", makeName: "Ford", modelName: "Fusion",
+      carYear: 2016, expectedPrice: 9500, mileage: 98000, daysOnMarket: 61, sellerCity: "Biloxi, MS" },
+  ];
+  const [a, b] = extractListings(feed);
+  assert.equal(a.price, 12998);
+  assert.equal(a.daysListed, 61);
+  assert.equal(a.dealer.city, "Gulfport");
+  assert.equal(a.dealer.state, "MS");
+  assert.equal(a.photo, "https://static.example.com/p-1024x768.jpg");
+  assert.equal(b.price, null);
+  assert.equal(b.dealer.city, "Biloxi");
 });
 
 test("schema.org JSON-LD car on a dealer page (strings with $ and commas, nested offers/seller)", () => {
@@ -107,6 +127,20 @@ test("homepage vs inventory links in dealers.csv", () => {
   assert.equal(isHomepage("https://www.example-motors.com/searchused.aspx"), false);
   assert.equal(isHomepage("https://www.example-motors.com/inventory"), false);
   assert.equal(isHomepage("https://www.example-motors.com/pre-owned/"), false);
+});
+
+test("bot walls vs a normal page that loads reCAPTCHA for its contact form", () => {
+  const recaptcha = `<html><head><script src="https://www.gstatic.com/recaptcha/releases/x/recaptcha__en.js"></script></head>
+    <body><input type="hidden" id="google_recaptcha_token" value=""><div class="g-recaptcha"></div></body></html>`;
+  assert.equal(looksBlocked("Cars For Sale in Gulfport, MS - Example Motors", recaptcha), false);
+  const widgets = `<html><head><style data-styles="">offer-refresh,dealer-listing,captcha-field,dealer-boost{visibility:hidden}</style></head><body>Used Kia</body></html>`;
+  assert.equal(looksBlocked("Used Kia Sales in Gulfport", widgets), false);
+  assert.equal(looksBlocked("Example Motors", "<html><body><h1>Please verify you are human</h1></body></html>"), true);
+  const datadome = `<html><head><title>example.com</title></head><body><script src="https://ct.captcha-delivery.com/c.js"></script>
+    <iframe src="https://geo.captcha-delivery.com/captcha/?x=1" title="DataDome CAPTCHA"></iframe></body></html>`;
+  assert.equal(looksBlocked("example.com", datadome), true);
+  assert.equal(looksBlocked("Access Denied", "<html></html>"), true);
+  assert.equal(looksBlocked("Just a moment...", "<html></html>"), true);
 });
 
 test("ZIP from city/state when a dealer row has none", () => {

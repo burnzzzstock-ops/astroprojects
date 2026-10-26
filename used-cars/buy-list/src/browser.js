@@ -78,7 +78,14 @@ export function friendlyNetError(e, what) {
   return m.split("\n")[0];
 }
 
+// A bot wall says so in its title or on screen, or loads a wall vendor's challenge.
+// Only the title and visible text are checked for words: plenty of normal dealer pages
+// mention "captcha" in scripts, styles and form markup (Google reCAPTCHA on the contact
+// form, a "captcha-field" widget). CarGurus' DataDome wall ("captcha-delivery.com") counts.
+const WALL_WORDS = /access denied|are you a human|verify you are human|(?<![a-z])captcha|request blocked|pardon our interruption/i;
+const WALL_MARKUP = /captcha-delivery\.com|_Incapsula_Resource|px-captcha/i;
 export function looksBlocked(title, html) {
-  return /access denied|just a moment|are you a human|verify you are human|captcha|request blocked|pardon our interruption/i
-    .test(`${title} ${String(html).slice(0, 5000)}`);
+  const s = String(html);
+  const text = s.replace(/<(script|style|noscript|template)\b[^>]*>[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  return /just a moment|attention required/i.test(title) || WALL_WORDS.test(`${title} ${text.slice(0, 3000)}`) || WALL_MARKUP.test(s.slice(0, 20000));
 }

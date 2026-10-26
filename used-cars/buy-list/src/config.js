@@ -27,7 +27,8 @@ export const DEFAULTS = {
     executablePath: "",       // leave blank: uses installed Google Chrome, else Playwright's Chromium
   },
   sources: {
-    cargurus: { enabled: true, maxPages: 60, pageDelayMs: 2500 },
+    // 48 cars/page, oldest first; ~140 pages reach the 60-day line within 100 mi (2026-10). It stops there on its own.
+    cargurus: { enabled: true, maxPages: 150, pageDelayMs: 2500 },
     marketcheck: { enabled: true, apiKey: "", maxPages: 15, monthlyCallCap: 450 },
     // concurrency = dealer sites read at once; dealerTimeoutMs = give up on one site after this long
     dealerSites: { enabled: true, file: "dealers.csv", maxPagesPerDealer: 8, pageDelayMs: 1500, concurrency: 3, dealerTimeoutMs: 180000 },

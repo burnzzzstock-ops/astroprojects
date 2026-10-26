@@ -15,16 +15,17 @@ const K = {
   trim: ["trim", "trimName", "trim_name", "vehicleConfiguration", "series"],
   title: ["listingTitle", "title", "heading", "vehicleTitle", "name"],
   price: ["price", "listPrice", "askingPrice", "internetPrice", "salePrice", "sellingPrice", "finalPrice",
-    "displayPrice", "priceValue", "retailPrice", "currentPrice", "expectedPrice"],
+    "displayPrice", "priceValue", "retailPrice", "currentPrice"],
+  // (not "expectedPrice": on CarGurus that's their market-value estimate, not the asking price)
   prevPrice: ["previousPrice", "originalPrice", "oldPrice", "ref_price", "wasPrice", "priceBeforeDrop", "lastPrice"],
   miles: ["mileage", "miles", "odometer", "mileageFromOdometer", "odometerReading", "mileageValue"],
   days: ["daysOnMarket", "daysOnLot", "daysInStock", "daysListed", "dom", "daysOnCarGurus", "ageInDays",
     "daysInInventory", "days_on_market"],
   since: ["inStockDate", "dateInStock", "stockDate", "listedDate", "firstListedDate", "datePosted", "listingDate",
-    "postedDate", "dateListed", "first_seen_at_date", "dateFirstListed"],
+    "postedDate", "dateListed", "first_seen_at_date", "dateFirstListed", "inventoryDate"],
   url: ["vdpUrl", "vdp_url", "listingUrl", "detailUrl", "detailsUrl", "vehicleUrl", "url", "link", "href"],
   photo: ["primaryPhotoUrl", "imageUrl", "mainPhotoUrl", "thumbnailUrl", "pictureUrl", "photoUrl", "image", "photo",
-    "thumbnail", "images", "photos", "photo_links"],
+    "thumbnail", "images", "photos", "photo_links", "originalPictureData", "pictureData"],
   color: ["exteriorColor", "exterior_color", "extColor", "colorName", "color"],
   stock: ["stockNumber", "stockNo", "stock_no", "stockNum", "stock", "sku"],
   condition: ["condition", "itemCondition", "vehicleCondition", "newOrUsed", "stockType", "inventoryType"],
@@ -69,6 +70,10 @@ function urlOf(v) {
   if (typeof v === "object") return urlOf(v.url ?? v.href ?? v.src ?? v.contentUrl ?? null);
   const s = String(v).trim();
   return /^(https?:)?\/\//i.test(s) || s.startsWith("/") ? s : null;
+}
+// CarGurus sends sellerCity as "Gulfport, MS": keep just the city.
+function cityOnly(v) {
+  return v ? v.replace(/,\s*[A-Z]{2}(\s+\d{5}(-\d{4})?)?$/i, "").trim() || null : null;
 }
 function yearOf(v) {
   const m = String(v ?? "").match(/\b(19[89]\d|20[0-4]\d)\b/);
@@ -116,7 +121,7 @@ function sellerOf(m) {
     name,
     phone: first(K.sellerPhone),
     street: first(K.sellerStreet, true),
-    city: first(K.sellerCity),
+    city: cityOnly(first(K.sellerCity)),
     state: first(K.sellerState),
     zip: first(K.sellerZip),
     website: first(K.sellerWebsite, true),

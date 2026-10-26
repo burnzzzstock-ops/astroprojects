@@ -96,7 +96,7 @@ firewall: allow it on **private** networks.
 | `scanTime`, `scanDays` | "06:00", Mon-Sat | When the morning scan runs (0 = Sunday) |
 | `excludeSellers` | your store + CarMax, Carvana… | Seller-name words to never list |
 | `browser.headless` | true | Set `false` to watch the browser work (helps if a site asks "are you human?") |
-| `sources.cargurus.maxPages` | 60 | How deep into CarGurus' oldest-first results to go |
+| `sources.cargurus.maxPages` | 150 | How deep into CarGurus' oldest-first results to go (it stops on its own at 60 days, ~140 pages) |
 | `sources.marketcheck.apiKey` | "" | Optional free key from https://www.marketcheck.com/apis |
 | `sources.dealerSites.maxPagesPerDealer` | 8 | Pages or "load more" clicks per dealer site |
 | `sources.dealerSites.concurrency` | 3 | Dealer sites read at the same time |
@@ -122,7 +122,7 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 29 tests offline: the extractor against CarGurus, JSON-LD and
+`npm test` runs 33 tests offline: the extractor against CarGurus, JSON-LD and
 dealer-API data shapes; merging and price drops; ranking; call outcomes; and a full
 headless-browser scan against fake local copies of each kind of site. See
 `../../CLAUDE.md` for how it's built.

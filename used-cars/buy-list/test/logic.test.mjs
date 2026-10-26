@@ -28,6 +28,21 @@ test("merge: one record per VIN across sources; excluded sellers and far dealers
   assert.equal(l.urls.dealer, "https://dealer.example/0");
 });
 
+test("a dealer-site car with no VIN and the same car with a VIN elsewhere are one record", () => {
+  const db = freshDb();
+  const site = (over = {}) => obs(0, { source: "dealer", vin: null, sourceId: "https://dealer.example/details/used-2016-ford-f-150/77", stock: null, daysListed: null, ...over });
+  applyObservations(db, [site()], config);
+  assert.equal(Object.keys(db.listings).length, 1);
+  applyObservations(db, [obs(0), site()], config); // CarGurus brings the VIN; the dealer site still has none
+  assert.deepEqual(Object.keys(db.listings), [obs(0).vin], "re-keyed to the VIN, no duplicate");
+  const l = db.listings[obs(0).vin];
+  assert.equal(l.key, obs(0).vin);
+  assert.deepEqual(Object.keys(l.seen).sort(), ["cargurus", "dealer"]);
+  // a different car at the same lot (other miles) stays separate
+  applyObservations(db, [site({ miles: 61234, sourceId: "https://dealer.example/details/used-2016-ford-f-150/78" })], config);
+  assert.equal(Object.keys(db.listings).length, 2);
+});
+
 test("price drops are per source: a cut counts, two sites disagreeing doesn't", () => {
   const db = freshDb();
   applyObservations(db, [obs(0, { price: 20000 }), obs(0, { source: "dealer", price: 19800 })], config);

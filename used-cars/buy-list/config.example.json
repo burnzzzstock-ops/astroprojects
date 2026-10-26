@@ -14,7 +14,7 @@
   "accessPin": "",
   "browser": { "headless": true, "executablePath": "" },
   "sources": {
-    "cargurus": { "enabled": true, "maxPages": 60, "pageDelayMs": 2500 },
+    "cargurus": { "enabled": true, "maxPages": 150, "pageDelayMs": 2500 },
     "marketcheck": { "enabled": true, "apiKey": "", "maxPages": 15, "monthlyCallCap": 450 },
     "dealerSites": { "enabled": true, "file": "dealers.csv", "maxPagesPerDealer": 8, "pageDelayMs": 1500, "concurrency": 3, "dealerTimeoutMs": 180000 }
   }

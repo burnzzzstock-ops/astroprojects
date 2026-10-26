@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buy List</title>
+<style>
+  :root { --bg:#07090d; --card:#0f141b; --ink:#e7edf4; --mut:#93a1b1; --acc:#2fd9ec; --line:rgba(255,255,255,.07); --field:#0a0e14; --hot:#ff6d5a; --ok:#46d98d; --warn:#f0c46a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14.5px/1.5 -apple-system, "Segoe UI", system-ui, Roboto, sans-serif; color:var(--ink); -webkit-text-size-adjust:100%; overflow-wrap:break-word;
+         background-color:var(--bg); background-image:radial-gradient(130% 90% at 50% -20%, #111826 0%, #07090d 62%); background-attachment:fixed; min-height:100vh; }
+  header { padding:14px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:5; background:rgba(9,12,17,.9); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid rgba(255,255,255,.06); }
+  header h1 { font-size:16px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; margin:0; }
+  header .sub { color:#6c7a8c; font-size:11px; letter-spacing:1.8px; text-transform:uppercase; padding-left:12px; margin-left:4px; border-left:1px solid rgba(255,255,255,.1); }
+  main { padding:16px 14px 48px; max-width:920px; margin:0 auto; }
+  a { color:var(--acc); }
+  .card { background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 34px rgba(0,0,0,.42); padding:14px; margin-bottom:12px; }
+  .label { font-size:11px; font-weight:650; letter-spacing:1.7px; text-transform:uppercase; color:#b9c6d4; }
+  .mut { color:var(--mut); font-size:12.5px; }
+  .kpis { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:12px 0; }
+  .kpi { border:1px solid var(--line); border-radius:10px; padding:10px; background:rgba(255,255,255,.015); }
+  .kpi b { display:block; font-weight:700; font-size:24px; font-variant-numeric:tabular-nums; line-height:1.2; }
+  .kpi span { font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:var(--mut); }
+  .kpi.acc b { color:var(--acc); }
+  .srcs { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .src { font-size:12px; padding:3px 9px; border-radius:8px; border:1px solid var(--line); background:rgba(255,255,255,.02); }
+  .src.ok { border-color:color-mix(in srgb, var(--ok), transparent 60%); }
+  .src.bad { border-color:color-mix(in srgb, var(--hot), transparent 55%); }
+  .src.skip { color:var(--mut); }
+  button.btn { font:inherit; text-transform:uppercase; letter-spacing:1.3px; font-size:12px; font-weight:600; color:#eafcff; background:linear-gradient(180deg, #0f6d80, #0a4552); border:1px solid color-mix(in srgb, var(--acc), transparent 62%); border-radius:10px; padding:9px 13px; cursor:pointer; touch-action:manipulation; }
+  button.btn.ghost { background:transparent; border:1px solid rgba(255,255,255,.13); color:var(--ink); font-weight:500; }
+  button:disabled { opacity:.5; cursor:default; }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .tabs { display:flex; gap:2px; border-bottom:1px solid rgba(255,255,255,.06); margin:16px 0 12px; overflow-x:auto; }
+  .tabs button { background:none; border:none; border-bottom:2px solid transparent; padding:9px 14px; color:#76839a; font:inherit; font-size:11.5px; font-weight:600; letter-spacing:1.3px; text-transform:uppercase; cursor:pointer; white-space:nowrap; }
+  .tabs button.on { color:var(--acc); border-bottom-color:var(--acc); }
+  .hidden { display:none !important; }
+  h3 { font-size:11.5px; font-weight:650; letter-spacing:1.7px; text-transform:uppercase; color:#b9c6d4; margin:18px 2px 8px; }
+  .dealer-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+  .dealer-name { font-size:16px; font-weight:700; }
+  .pill { display:inline-block; font-size:10.5px; letter-spacing:.6px; text-transform:uppercase; padding:2px 8px; border-radius:99px; border:1px solid rgba(255,255,255,.16); color:var(--mut); white-space:nowrap; vertical-align:middle; }
+  .pill.ok { color:var(--ok); border-color:color-mix(in srgb, var(--ok), transparent 55%); }
+  .pill.warn { color:var(--warn); border-color:color-mix(in srgb, var(--warn), transparent 55%); }
+  a.call { display:inline-flex; align-items:center; gap:6px; text-decoration:none; color:#06222a; background:var(--acc); font-weight:700; border-radius:10px; padding:9px 14px; font-size:15px; font-variant-numeric:tabular-nums; }
+  a.link { font-size:12.5px; text-decoration:none; color:var(--mut); border-bottom:1px dotted rgba(255,255,255,.25); }
+  a.link:hover { color:var(--ink); }
+  .unit { border-top:1px solid var(--line); padding:12px 0 4px; margin-top:12px; }
+  .unit.flush { border-top:none; margin-top:0; padding-top:0; }
+  .unit-top { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+  .unit-title { font-weight:650; font-size:15px; }
+  .score { font-size:12px; font-weight:700; color:var(--acc); white-space:nowrap; letter-spacing:.5px; }
+  .facts { font-variant-numeric:tabular-nums; margin:2px 0 6px; }
+  .chips { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:6px; }
+  .chip { font-size:11.5px; padding:2px 8px; border-radius:6px; background:rgba(47,217,236,.07); color:#bfeff5; border:1px solid rgba(47,217,236,.16); }
+  .chip.drop { background:rgba(70,217,141,.08); color:#a9f0c8; border-color:rgba(70,217,141,.22); }
+  .lastcall { font-size:12px; color:var(--warn); margin-bottom:6px; }
+  .inputs { display:grid; grid-template-columns:1fr 110px; gap:6px; margin:6px 0; }
+  input, select { width:100%; background:var(--field); color:var(--ink); border:1px solid rgba(255,255,255,.09); border-radius:9px; padding:8px 10px; font:inherit; font-size:13.5px; }
+  input:focus, select:focus { outline:none; border-color:color-mix(in srgb, var(--acc), transparent 45%); }
+  .outs { display:flex; gap:5px; flex-wrap:wrap; }
+  .outs button { font:inherit; font-size:12px; font-weight:600; padding:7px 10px; border-radius:8px; cursor:pointer; background:transparent; color:var(--ink); border:1px solid rgba(255,255,255,.13); touch-action:manipulation; }
+  .outs button.neg { color:var(--warn); border-color:color-mix(in srgb, var(--warn), transparent 60%); }
+  .outs button.buy { color:var(--ok); border-color:color-mix(in srgb, var(--ok), transparent 55%); }
+  .outs button.pass { color:var(--mut); }
+  .dealer-actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .ride { font-size:10.5px; letter-spacing:.8px; text-transform:uppercase; color:var(--mut); }
+  .warnbox { border-left:3px solid var(--warn); padding:8px 10px; background:rgba(240,196,106,.06); border-radius:6px; font-size:12.5px; margin-top:10px; }
+  .empty { text-align:center; padding:28px 14px; color:var(--mut); }
+  code { color:var(--acc); font-size:12.5px; }
+  #toast { position:fixed; bottom:calc(16px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); background:#0f141b; color:var(--ink); border:1px solid rgba(255,255,255,.14); box-shadow:0 10px 30px rgba(0,0,0,.5); padding:10px 16px; border-radius:10px; opacity:0; transition:opacity .25s; pointer-events:none; max-width:90vw; }
+  @media (max-width: 640px) {
+    input, select { font-size:16px; }
+    .kpis { grid-template-columns:repeat(2, 1fr); }
+    .outs button { padding:9px 11px; }
+    header .sub { display:none; }
+  }
+  @media print {
+    body { background:#fff; color:#000; }
+    header, .tabs, .bar, .outs, .inputs, .dealer-actions, #toast, .no-print { display:none !important; }
+    .card { box-shadow:none; border:1px solid #bbb; background:#fff; break-inside:avoid; }
+    .mut, .pill, .ride, a.link, .score, .src { color:#333 !important; border-color:#999 !important; }
+    a.call { background:none; color:#000; padding:0; }
+    .chip { background:none; color:#000; border-color:#999; }
+    main { max-width:none; padding:0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" stroke="var(--acc)" stroke-width="2"/><circle cx="12" cy="12" r="5.5" stroke="var(--acc)" stroke-width="2"/><circle cx="12" cy="12" r="1.8" fill="var(--acc)"/>
+  </svg>
+  <h1>Buy List</h1><span class="sub">Aged used cars to call on</span>
+</header>
+<main>
+  <div class="card">
+    <div class="label" id="sumTitle">Aged used cars</div>
+    <div class="kpis">
+      <div class="kpi acc"><b id="kCalls">–</b><span>Calls today</span></div>
+      <div class="kpi"><b id="kPlay">–</b><span>In play</span></div>
+      <div class="kpi"><b id="kWeek">–</b><span>Calls · 7 days</span></div>
+      <div class="kpi"><b id="kBought">–</b><span>Bought · month</span></div>
+    </div>
+    <div class="mut" id="scanLine">Loading…</div>
+    <div class="srcs" id="srcs"></div>
+    <div id="scanNote"></div>
+    <div class="bar" style="margin-top:12px;">
+      <button class="btn" id="scanBtn" onclick="scanNow()">↻ Scan now</button>
+      <button class="btn ghost" onclick="downloadCsv()">⬇ CSV</button>
+      <button class="btn ghost" onclick="window.print()">🖨 Print</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button data-view="today" class="on">Today</button>
+    <button data-view="all">All aged</button>
+    <button data-view="hidden">Hidden</button>
+  </div>
+
+  <section id="view-today">
+    <div id="playWrap" class="hidden"><h3>In play · negotiating</h3><div id="play"></div></div>
+    <h3 id="todayHead">Today's calls</h3>
+    <div id="today"></div>
+    <p class="mut no-print" id="todayFoot" style="text-align:center;"></p>
+  </section>
+
+  <section id="view-all" class="hidden">
+    <div class="card no-print">
+      <div class="inputs" style="grid-template-columns:1fr 150px; margin:0;">
+        <input id="q" placeholder="Search: tacoma, f-150 lariat, gulfport…" oninput="debouncedBrowse()">
+        <select id="sort" onchange="browse()">
+          <option value="score">Best buys</option>
+          <option value="days">Longest listed</option>
+          <option value="drops">Most price drops</option>
+          <option value="price">Lowest price</option>
+          <option value="distance">Closest</option>
+        </select>
+      </div>
+      <div class="mut" id="allCount" style="margin-top:8px;"></div>
+    </div>
+    <div id="all"></div>
+  </section>
+
+  <section id="view-hidden" class="hidden">
+    <div class="card">
+      <div class="label">Hidden dealers</div>
+      <p class="mut">Lots you never want on the list (wholesale-only, never sells, etc.). Their cars are skipped until you unhide them.</p>
+      <div id="hiddenList"></div>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+let PIN = localStorage.getItem("buylist_pin") || "";
+let STATUS = null, TODAY = null, HIDDEN = [];
+const KEYS = [];   // index → listing key, so buttons never embed site text
+let BROWSE = [];
+
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
+function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.style.opacity = 1; clearTimeout(toast._t); toast._t = setTimeout(() => el.style.opacity = 0, 2400); }
+function money(n) { return n ? "$" + Number(n).toLocaleString("en-US") : "No price"; }
+function num(n) { return n != null ? Number(n).toLocaleString("en-US") : "?"; }
+function clock(hhmm) { const [h, m] = String(hhmm).split(":").map(Number); return `${(h % 12) || 12}:${String(m || 0).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; }
+function when(iso) { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
+// Listing data comes from outside sites: only ever link to real web URLs.
+function safeUrl(u) {
+  if (!u) return null;
+  const s = String(u).trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(s)) return "https://" + s;
+  return null;
+}
+function telHref(p) {
+  const d = String(p || "").replace(/\D/g, "");
+  if (d.length === 10) return "tel:+1" + d;
+  if (d.length === 11 && d[0] === "1") return "tel:+" + d;
+  return null;
+}
+function keyIndex(k) { KEYS.push(k); return KEYS.length - 1; }
+
+async function api(path, opts = {}) {
+  const r = await fetch("/api" + path, { ...opts, headers: { "Content-Type": "application/json", "x-pin": PIN, ...(opts.headers || {}) } });
+  if (r.status === 401 && !opts._retried) {
+    const p = (prompt("Buy List PIN:") || "").trim();
+    if (p) { PIN = p; localStorage.setItem("buylist_pin", p); return api(path, { ...opts, _retried: true }); }
+  }
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok && r.status !== 202) throw new Error(body.error || "Error " + r.status);
+  return body;
+}
+
+// ── Status ──
+const SRC_NAME = { cargurus: "CarGurus", dealerSites: "Dealer sites", marketcheck: "Marketcheck" };
+async function loadStatus() {
+  const s = STATUS = await api("/status");
+  const f = s.filters;
+  document.getElementById("sumTitle").textContent = `Used cars listed ${f.minDaysListed}+ days · within ${f.radiusMiles} mi of ${f.zip}`;
+  document.getElementById("kPlay").textContent = s.stats.negotiating;
+  document.getElementById("kWeek").textContent = s.stats.callsWeek;
+  document.getElementById("kBought").textContent = s.stats.boughtMonth;
+  const btn = document.getElementById("scanBtn");
+  btn.disabled = s.running;
+  btn.textContent = s.running ? "Scanning…" : "↻ Scan now";
+  const last = s.lastScan;
+  document.getElementById("scanLine").textContent = s.running
+    ? "Scanning now… (a few minutes; the list updates when it's done)"
+    : last ? `Last scan ${when(last.finishedAt || last.startedAt)} · ${num(s.stats.tracked)} aged cars at ${num(s.stats.dealers)} sellers · next scan ${clock(f.scanTime)}`
+    : `No scan yet. Tap Scan now, or it runs at ${clock(f.scanTime)}.`;
+
+  const chips = [];
+  for (const [k, name] of Object.entries(SRC_NAME)) {
+    if (!s.sourcesEnabled[k]) continue;
+    const r = last?.sources?.[k];
+    if (!r) chips.push(`<span class="src skip">${name}: not run yet</span>`);
+    else if (r.skipped) chips.push(`<span class="src skip" title="${esc(r.note)}">${name}: ${esc(r.note)}</span>`);
+    else if (r.ok) chips.push(`<span class="src ok">✓ ${name}: ${num(r.found)} cars${k === "dealerSites" ? ` from ${r.dealersOk}/${r.dealerCount} sites` : ""}</span>`);
+    else chips.push(`<span class="src bad" title="${esc(r.error)}">✕ ${name}: ${esc(r.error)}</span>`);
+  }
+  document.getElementById("srcs").innerHTML = chips.join("");
+
+  let note = "";
+  if (s.marketcheck.hasKey) note += `<div class="mut" style="margin-top:6px;">Marketcheck free tier: ${s.marketcheck.used}/${s.marketcheck.cap} calls this month</div>`;
+  const failedSites = last?.sources?.dealerSites?.failed || [];
+  if (failedSites.length) note += `<div class="warnbox">Dealer sites that didn't load: ${failedSites.map(x => esc(x.name) + " (" + esc(x.error) + ")").join(", ")}</div>`;
+  if (last && !last.ok && Object.values(last.sources || {}).every(x => x.skipped)) {
+    note += `<div class="warnbox">No source is set up yet. CarGurus works out of the box; add dealer websites to <code>dealers.csv</code> and (optional) a free Marketcheck key in <code>config.json</code>.</div>`;
+  }
+  document.getElementById("scanNote").innerHTML = note;
+  return s;
+}
+
+// ── Rendering ──
+function dealerBlock(d) {
+  const tel = telHref(d.phone);
+  const site = safeUrl(d.website);
+  const addr = [d.street, d.city, d.state, d.zip].filter(Boolean).join(", ");
+  const where = [[d.city, d.state].filter(Boolean).join(", "), d.distance != null ? Math.round(d.distance) + " mi" : null].filter(Boolean).join(" · ");
+  const find = "https://www.google.com/search?q=" + encodeURIComponent([d.name, d.city, d.state, "phone"].filter(Boolean).join(" "));
+  const priv = String(d.dealerKey).startsWith("private:");
+  return `
+    <div class="dealer-head">
+      <div><div class="dealer-name">${esc(d.name)}</div><div class="mut">${esc(where)}</div></div>
+      ${d.type ? `<span class="pill">${esc(d.type)}</span>` : ""}
+    </div>
+    <div class="bar" style="margin-top:10px;">
+      ${tel ? `<a class="call" href="${tel}">📞 ${esc(d.phone)}</a>` : priv ? `<span class="mut">Private seller: contact through the listing</span>` : `<a class="link" href="${find}" target="_blank" rel="noopener">No phone on the listing · find it ↗</a>`}
+      ${site ? `<a class="link" href="${esc(site)}" target="_blank" rel="noopener">Website ↗</a>` : ""}
+      ${addr ? `<a class="link" href="https://maps.google.com/?q=${encodeURIComponent(addr)}" target="_blank" rel="noopener">Map ↗</a>` : ""}
+    </div>`;
+}
+
+const OUT_BTNS = [
+  ["no_answer", "No answer", ""], ["left_message", "Left msg", ""], ["too_high", "Too high", ""],
+  ["not_selling", "Won't sell", ""], ["negotiating", "Negotiating", "neg"], ["bought", "Bought ✓", "buy"], ["pass", "Pass", "pass"],
+];
+
+function unitBlock(u, { showDealer = false, flush = false } = {}) {
+  const i = keyIndex(u.key);
+  const title = [u.year, u.make, u.model, u.trim].filter(Boolean).join(" ") || u.title || "Vehicle";
+  const chips = (u.why || []).filter(w => !/days listed$/.test(w) && !/ mi away$/.test(w))
+    .map(w => `<span class="chip ${/drop|since your last call/.test(w) ? "drop" : ""}">${esc(w)}</span>`).join("");
+  const status = { negotiating: `<span class="pill warn">Negotiating</span>`, bought: `<span class="pill ok">Bought</span>`, passed: `<span class="pill">Passed</span>` }[u.status] || "";
+  const outLabel = STATUS?.outcomes?.[u.lastOutcome] || u.lastOutcome;
+  const last = u.lastCallAt
+    ? `<div class="lastcall">Last call ${esc(when(u.lastCallAt))}: ${esc(outLabel)}${u.priceAtLastCall && u.priceAtLastCall !== u.price ? ` at ${money(u.priceAtLastCall)}` : ""}${u.offer ? ` · our offer ${money(u.offer)}` : ""}${u.notes ? ` · “${esc(u.notes)}”` : ""}</div>` : "";
+  const stale = u.stale ? `<div class="lastcall" style="color:var(--hot);">Not seen in the last few scans; it may have sold.</div>` : "";
+  const links = (u.sources || []).map(s => { const url = safeUrl(s.url); return url ? `<a class="link" href="${esc(url)}" target="_blank" rel="noopener">${esc(s.label)} ↗</a>` : `<span class="mut">${esc(s.label)}</span>`; }).join(" · ");
+  const closed = u.status === "bought" || u.status === "passed";
+  const outs = closed
+    ? `<div class="outs"><button onclick="logOne(${i}, 'reopen')">↺ Reopen</button></div>`
+    : `<div class="inputs"><input id="n${i}" placeholder="Notes"><input id="o${i}" placeholder="Offer $" inputmode="numeric"></div>
+       <div class="outs">${OUT_BTNS.map(([k, label, cls]) => `<button class="${cls}" onclick="logOne(${i}, '${k}')">${label}</button>`).join("")}</div>`;
+  const dealerLine = showDealer ? (() => {
+    const tel = telHref(u.dealer?.phone);
+    return `<div class="mut" style="margin-bottom:4px;">${esc(u.dealer?.name || "Private seller")}${u.dealer?.city ? " · " + esc(u.dealer.city) : ""}${tel ? ` · <a href="${tel}">${esc(u.dealer.phone)}</a>` : ""}</div>`;
+  })() : "";
+  return `
+    <div class="unit${flush ? " flush" : ""}">
+      ${u.rideAlong ? `<div class="ride">Also on this lot</div>` : ""}
+      <div class="unit-top"><div class="unit-title">${esc(title)} ${status}</div><div class="score" title="Buy score">${u.score ?? ""}</div></div>
+      ${dealerLine}
+      <div class="facts"><b>${money(u.price)}</b> · ${num(u.miles)} mi · <b>${u.days}</b> days listed${u.distance != null && showDealer ? ` · ${Math.round(u.distance)} mi away` : ""}${u.color ? " · " + esc(u.color) : ""}</div>
+      ${chips ? `<div class="chips">${chips}</div>` : ""}
+      ${last}${stale}
+      <div class="mut" style="margin-bottom:6px;">${links}${u.vin ? ` · VIN ${esc(u.vin)}` : ""}${u.stock ? ` · Stk ${esc(u.stock)}` : ""}</div>
+      ${outs}
+    </div>`;
+}
+
+function renderToday() {
+  const t = TODAY;
+  KEYS.length = 0;
+  const units = t.dealers.reduce((n, d) => n + d.units.length, 0);
+  document.getElementById("kCalls").textContent = t.dealers.length;
+  document.getElementById("todayHead").textContent = `Today's calls · ${t.dealers.length} seller${t.dealers.length === 1 ? "" : "s"} · ${units} car${units === 1 ? "" : "s"}`;
+  document.getElementById("playWrap").classList.toggle("hidden", !t.negotiating.length);
+  document.getElementById("play").innerHTML = t.negotiating.map(u => `<div class="card">${unitBlock(u, { showDealer: true, flush: true })}</div>`).join("");
+  const el = document.getElementById("today");
+  el.innerHTML = !t.dealers.length
+    ? `<div class="card empty">${STATUS?.lastScan ? "Nothing due today. New aged cars land with the next scan." : "No cars yet. They'll appear after the first scan."}</div>`
+    : t.dealers.map((d, di) => `<div class="card">
+        ${dealerBlock(d)}
+        <div class="dealer-actions">
+          <span class="mut">Whole lot:</span>
+          <div class="outs"><button onclick="logDealer(${di}, 'no_answer')">No answer</button><button onclick="logDealer(${di}, 'left_message')">Left msg</button></div>
+          ${String(d.dealerKey).startsWith("private:") ? "" : `<button class="btn ghost" style="margin-left:auto; padding:6px 10px; font-size:11px;" onclick="hideDealer(${di})">Hide dealer</button>`}
+        </div>
+        ${d.units.map(u => unitBlock(u)).join("")}
+      </div>`).join("");
+  const foot = [];
+  if (t.dueTotal > units) foot.push(`${t.dueTotal - units} more due below today's cut (see All aged)`);
+  if (t.laterCount) foot.push(`${t.laterCount} scheduled for a later day`);
+  document.getElementById("todayFoot").textContent = foot.join(" · ");
+}
+
+async function loadToday() { TODAY = await api("/today"); renderToday(); }
+
+// ── Actions ──
+async function logKeys(keys, outcome, notes = "", offer = "") {
+  try {
+    await api("/outcome", { method: "POST", body: JSON.stringify({ keys, outcome, notes, offer: offer ? Number(offer) : null }) });
+    const label = STATUS?.outcomes?.[outcome] || outcome;
+    toast(keys.length > 1 ? `${label}: logged for ${keys.length} cars` : `${label}: logged`);
+    await Promise.all([loadToday(), loadStatus()]);
+    if (!document.getElementById("view-all").classList.contains("hidden")) browse();
+  } catch (e) { toast(e.message); }
+}
+function logOne(i, outcome) {
+  const notes = document.getElementById("n" + i)?.value || "";
+  const offer = (document.getElementById("o" + i)?.value || "").replace(/[^\d]/g, "");
+  return logKeys([KEYS[i]], outcome, notes, offer);
+}
+function logDealer(di, outcome) { return logKeys(TODAY.dealers[di].units.map(u => u.key), outcome); }
+
+async function hideDealer(di) {
+  const d = TODAY.dealers[di];
+  if (!confirm(`Hide ${d.name} from the Buy List? Their cars are skipped until you unhide them (Hidden tab).`)) return;
+  try { await api("/hide", { method: "POST", body: JSON.stringify({ dealerKey: d.dealerKey, name: d.name }) }); toast("Dealer hidden"); loadToday(); loadStatus(); }
+  catch (e) { toast(e.message); }
+}
+async function unhideDealer(i) {
+  try { await api("/unhide", { method: "POST", body: JSON.stringify({ dealerKey: HIDDEN[i].dealerKey }) }); toast("Dealer back on the list"); loadHidden(); loadToday(); }
+  catch (e) { toast(e.message); }
+}
+
+async function scanNow() {
+  document.getElementById("scanBtn").disabled = true;
+  try { await api("/scan", { method: "POST" }); toast("Scanning… this takes a few minutes"); setTimeout(pollScan, 3000); }
+  catch (e) { toast(e.message); document.getElementById("scanBtn").disabled = false; }
+}
+async function pollScan() {
+  const s = await loadStatus().catch(() => null);
+  if (s?.running) return setTimeout(pollScan, 5000);
+  await loadToday();
+  if (s?.lastScan) toast(`Scan done: ${num(s.lastScan.kept)} cars checked, ${num(s.lastScan.newCount)} new`);
+}
+function downloadCsv() { window.open(`/api/today.csv${PIN ? "?pin=" + encodeURIComponent(PIN) : ""}`, "_blank"); }
+
+// ── All aged / hidden ──
+let browseTimer = null;
+function debouncedBrowse() { clearTimeout(browseTimer); browseTimer = setTimeout(browse, 250); }
+async function browse() {
+  const q = document.getElementById("q").value.trim();
+  const sort = document.getElementById("sort").value;
+  try {
+    const r = await api(`/listings?q=${encodeURIComponent(q)}&sort=${sort}`);
+    KEYS.length = 0; // only the visible view's buttons are live; switching tabs re-renders
+    document.getElementById("allCount").textContent = r.total > r.rows.length ? `Showing ${r.rows.length} of ${num(r.total)} aged cars` : `${num(r.total)} aged car${r.total === 1 ? "" : "s"}`;
+    document.getElementById("all").innerHTML = r.rows.length
+      ? r.rows.map(u => `<div class="card">${unitBlock(u, { showDealer: true, flush: true })}</div>`).join("")
+      : `<div class="card empty">No aged cars match.</div>`;
+  } catch (e) { toast(e.message); }
+}
+async function loadHidden() {
+  HIDDEN = await api("/hidden").catch(e => { toast(e.message); return []; });
+  document.getElementById("hiddenList").innerHTML = HIDDEN.length
+    ? HIDDEN.map((r, i) => `<div class="unit" style="display:flex; justify-content:space-between; align-items:center; gap:10px;"><span>${esc(r.name)}</span><button class="btn ghost" style="padding:6px 10px; font-size:11px;" onclick="unhideDealer(${i})">Unhide</button></div>`).join("")
+    : `<p class="mut">No hidden dealers.</p>`;
+}
+
+for (const b of document.querySelectorAll(".tabs button")) {
+  b.onclick = () => {
+    for (const x of document.querySelectorAll(".tabs button")) x.classList.toggle("on", x === b);
+    for (const v of ["today", "all", "hidden"]) document.getElementById("view-" + v).classList.toggle("hidden", v !== b.dataset.view);
+    if (b.dataset.view === "today") loadToday();
+    if (b.dataset.view === "all") browse();
+    if (b.dataset.view === "hidden") loadHidden();
+  };
+}
+
+(async () => {
+  try {
+    const s = await loadStatus();
+    await loadToday();
+    if (s.running) pollScan();
+  } catch (e) { document.getElementById("scanLine").textContent = e.message; }
+})();
+</script>
+</body>
+</html>

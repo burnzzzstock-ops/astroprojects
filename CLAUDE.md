@@ -1,0 +1,78 @@
+# astroprojects: developer guide
+
+Side projects for the dealership (used cars, staffing, service, …), one folder per
+department/project. Read this first in any new session.
+
+## Standing rules
+
+- **Separate from Riley / TextDrive.** Riley (the AI SDR) lives in `burnzzzstock-ops/sales1`.
+  Nothing here imports from, writes to, or deploys with it, and nothing here goes into it.
+  A first Buy List was built inside Riley and backed out at the operator's request.
+- **No paid services.** Free data sources and free tiers that can't bill (no card on file).
+  Projects run on a store PC, not paid hosting.
+- **No customer PII in the repo.** Test data uses obviously fake names, 555-01xx phones and
+  made-up VINs. Real data stays in each project's gitignored `data/` folder on the PC.
+- **Keep this file current.** When a session changes how a project works, update its section
+  here in the same commit.
+
+## used-cars/buy-list: aged-inventory Buy List
+
+The used car manager's daily call sheet: used cars for sale within 100 mi of 39540 listed
+60+ days, ranked, grouped by dealer, with call outcomes tracked. Node 20+, runs locally
+(`npm start` → http://localhost:4400). Windows install is `setup.bat`, which runs npm install,
+`npx playwright install chromium`, copies config/dealers templates, adds a Startup shortcut to
+`start.bat` (restart loop) and a desktop `.url` link.
+
+- **Storage:** one JSON file, `data/buylist.json` (`src/store.js`), with no native deps. Every write
+  is a synchronous load → modify → save (`withDb`) and atomic (tmp file + rename, plus a `.bak`),
+  so outcome taps and a finishing scan can't clobber each other. A scan gathers everything async
+  first and touches the file only once, at the end.
+- **Sources** (`src/sources/`), each fails on its own and reports `{ok, found, error}` into the
+  scan record:
+  - `cargurus.js`: real browser (Playwright, installed Chrome first, then Chromium).
+    A. fetches `/Cars/searchResults.action?...sortType=AGE_IN_DAYS&sortDir=DESC&offset=&maxResults=50`
+    from inside the page (same-origin, cookies). B. falls back to opening the search page,
+    capturing its JSON responses and clicking Next. The oldest-first sort lets it stop once a
+    page's newest car is under `minDaysListed`, but only while the site actually honors the sort
+    (`makeAgeGate`). It detects bot walls (`looksBlocked`) and saves html/png/json to `data/debug`
+    when nothing is read. Automated use is against CarGurus' terms (the operator chose it knowingly).
+    **Untested against the live site** (the dev sandbox can't reach it); the operator runs it and
+    sends debug files.
+  - `dealerSites.js`: one page per `dealers.csv` row. Reads JSON responses, JSON-LD and
+    `script[type=application/json]`, then a DOM fallback (VINs printed on the page; climbs to the
+    single-VIN card; skips script/style tags). Scrolls, then clicks next/load-more, with `settle()`
+    waiting for the page to go quiet. CSV contact info overrides scraped dealer info; distance
+    comes from the zip via the free `zipcodes` table.
+  - `marketcheck.js`: v2 `/search/car/active`, FREE tier only (key optional). `dom_range`
+    filter, 50 rows per call, `start` = offset. Monthly cap tracked in `db.marketcheckCalls[YYYY-MM]`.
+- **Generic extractor** (`src/extract.js`): walks any JSON for listing-like objects (valid VIN with
+  no I/O/Q, or price + year + name + miles) and reads each field from an alias list (daysOnMarket,
+  inStockDate, serviceProviderName, phoneNumberString, JSON-LD offers/seller/address…). One
+  extractor serves every site, so a renamed field means adding an alias, not a rewrite.
+- **Merge** (`src/listings.js`): keyed by VIN (else `source:id`). Days listed = max(each source's
+  reported days aged forward from when it said so, days since we first saw the car). Price drops
+  are detected per source against that same source only (≥$100), so two sites with different
+  prices never look like a drop. A provider's previous price on first sight counts as one drop.
+  A drop on a `working` car clears `nextCallDay` (back on today's list). It excludes `excludeSellers`
+  name fragments, hidden dealers, cars beyond radius+5 mi, and new cars. Cars nobody called that
+  are unseen for 45 days get pruned. A car is "active" if any source saw it within 3 days.
+- **Ranking / list / outcomes** (`src/buyList.js`): score = days listed 0-40, drops 0-20, dropped
+  since your last call +10, closeness 0-15, no price −10, 150k+ mi −5, each with a "why" chip.
+  Today = top `dailyListSize` due cars grouped by dealer (`dealerKeyOf`: normalized name minus
+  LLC/Inc; private sellers get one key per car), plus up to 6 per card riding along, with
+  negotiating cars pinned. Outcomes: no_answer +1d, left_message +2d, too_high +10d,
+  not_selling +21d, negotiating, bought, pass, reopen. Due days are local calendar days.
+- **Server** (`src/server.js`): Express 5 on 127.0.0.1, or 0.0.0.0 only when `allowPhoneAccess`
+  AND `accessPin` are set (non-local requests need the PIN). Manual scan has a 30-min cooldown.
+  The scheduler ticks every 5 min: on scan days at/after `scanTime`, it runs once per day if no
+  scheduled scan ran today (catches up after sleep). `data/scan.lock` (3h stale) prevents
+  overlap with `npm run scan`.
+- **Page** (`public/index.html`): dark, phone-first, tap-to-call. Buttons reference cars by index
+  (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all
+  text is escaped.
+- **Tests:** `npm test` (node --test, 24 tests, offline). `test/scan.test.mjs` runs a real headless
+  browser against an Express server that copies each site shape: CarGurus feed (400 cars,
+  oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,
+  dealer API + Next, JSON-LD, plain HTML + Load more, and a broken site.
+- **Next ideas:** list dealers seen on CarGurus that aren't in dealers.csv yet; an
+  offer-range hint from comparable cars in the data.

@@ -1,0 +1,21 @@
+{
+  "name": "buy-list",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Daily call list of used cars that have been listed a long time within 100 miles, for the used car manager to try to buy. Free sources only, runs on a local PC.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "scan": "node scripts/scan.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "playwright": "1.63.0",
+    "zipcodes": "^8.0.0"
+  }
+}

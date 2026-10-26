@@ -1,0 +1,21 @@
+{
+  "zip": "39540",
+  "radiusMiles": 100,
+  "minDaysListed": 60,
+  "maxDaysListed": 365,
+  "minPrice": 4000,
+  "maxMiles": 175000,
+  "dailyListSize": 25,
+  "scanTime": "06:00",
+  "scanDays": [1, 2, 3, 4, 5, 6],
+  "excludeSellers": ["astro ford", "carmax", "carvana", "vroom", "enterprise car sales", "hertz car sales"],
+  "port": 4400,
+  "allowPhoneAccess": false,
+  "accessPin": "",
+  "browser": { "headless": true, "executablePath": "" },
+  "sources": {
+    "cargurus": { "enabled": true, "maxPages": 60, "pageDelayMs": 2500 },
+    "marketcheck": { "enabled": true, "apiKey": "", "maxPages": 15, "monthlyCallCap": 450 },
+    "dealerSites": { "enabled": true, "file": "dealers.csv", "maxPagesPerDealer": 8, "pageDelayMs": 1500 }
+  }
+}

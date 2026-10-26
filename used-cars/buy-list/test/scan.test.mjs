@@ -194,3 +194,22 @@ test("CarGurus blocked: clear error + debug files saved", async () => {
     srv.close();
   }
 });
+
+test("a dealer site that never finishes loading is dropped, not waited on forever", async () => {
+  const { fetchDealerSites } = await import("../src/sources/dealerSites.js");
+  const app = express();
+  app.get("/hang", () => {}); // never responds
+  const srv = await new Promise((r) => { const s = app.listen(0, "127.0.0.1", () => r(s)); });
+  const { browser, context } = await launchBrowser();
+  try {
+    const cfg = { ...config, sources: { ...config.sources, dealerSites: { ...config.sources.dealerSites, dealerTimeoutMs: 3000 } } };
+    const t0 = Date.now();
+    const r = await fetchDealerSites(cfg, { context, dealers: [{ name: "Hanging Motors", url: `http://127.0.0.1:${srv.address().port}/hang` }] });
+    assert.ok(Date.now() - t0 < 15000);
+    assert.equal(r.dealersFailed[0].error, "site took too long to load");
+  } finally {
+    await browser.close();
+    srv.closeAllConnections?.();
+    srv.close();
+  }
+});

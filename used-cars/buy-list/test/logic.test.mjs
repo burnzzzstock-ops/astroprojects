@@ -193,3 +193,20 @@ test("other sources' dealer names land on the dealers.csv dealer's card", () => 
   assert.notEqual(key(16), key(13));
   assert.equal(key(17), "toyota", "one-word names never merge");
 });
+
+test("dealer roster: aged/seen counts per dealers.csv row, last error, sorted by distance", () => {
+  const db = freshDb();
+  applyObservations(db, [
+    obs(20, { source: "dealer", dealer: { name: "Example Motors", city: "Gulfport", state: "MS", zip: "39501" } }),
+    obs(21, { source: "dealer", daysListed: 10, dealer: { name: "Example Motors", city: "Gulfport", state: "MS", zip: "39501" } }),
+  ], config);
+  db.scans.unshift({ sources: { dealerSites: { ok: true, failed: [{ name: "Broken Lot", error: "no cars found on the page" }] } } });
+  const roster = B.dealerRoster(db, config, [
+    { name: "Broken Lot", city: "Mobile", state: "AL", zip: "36602", url: "https://example.com/" },
+    { name: "Example Motors", city: "Gulfport", state: "MS", zip: "39501", url: "https://example.org/" },
+  ]);
+  assert.equal(roster[0].name, "Example Motors", "closest first");
+  assert.equal(roster[0].seen, 2);
+  assert.equal(roster[0].aged, 1, "only the 60+ day car counts as aged");
+  assert.equal(roster[1].error, "no cars found on the page");
+});

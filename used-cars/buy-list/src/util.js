@@ -36,7 +36,7 @@ export function zipDistance(a, b) {
 export function zipForCity(city, state) {
   if (!city || !state) return null;
   const c = String(city).trim();
-  for (const name of [c, c.replace(/[^a-z ]/gi, ""), c.replace(/\bSt\.?\s/i, "Saint ")]) {
+  for (const name of [c, c.replace(/[^a-z ]/gi, ""), c.replace(/\bSt\.?\s/i, "Saint "), c.replace(/([a-z])([A-Z])/g, "$1 $2")]) {
     const hit = zipcodes.lookupByName(name, String(state).trim().toUpperCase())[0];
     if (hit) return hit.zip;
   }

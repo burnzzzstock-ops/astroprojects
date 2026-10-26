@@ -9,10 +9,15 @@
   * { box-sizing:border-box; }
   body { margin:0; font:14.5px/1.5 -apple-system, "Segoe UI", system-ui, Roboto, sans-serif; color:var(--ink); -webkit-text-size-adjust:100%; overflow-wrap:break-word;
          background-color:var(--bg); background-image:radial-gradient(130% 90% at 50% -20%, #111826 0%, #07090d 62%); background-attachment:fixed; min-height:100vh; }
-  header { padding:14px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:5; background:rgba(9,12,17,.9); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid rgba(255,255,255,.06); }
+  header { padding-block:14px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:flex; align-items:center; gap:10px; position:sticky; top:env(safe-area-inset-top, 0px); z-index:5; background:rgba(9,12,17,.9); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid rgba(255,255,255,.06); }
   header h1 { font-size:16px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; margin:0; }
   header .sub { color:#6c7a8c; font-size:11px; letter-spacing:1.8px; text-transform:uppercase; padding-left:12px; margin-left:4px; border-left:1px solid rgba(255,255,255,.1); }
-  main { padding:16px 14px 48px; max-width:920px; margin:0 auto; }
+  main { padding-block:16px 48px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); max-width:920px; margin:0 auto; }
+  .drow { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; border-top:1px solid var(--line); padding:10px 0; }
+  .drow:first-child { border-top:none; }
+  .drow > div { min-width:0; }
+  .dstat { font-size:12px; white-space:nowrap; }
+  .dstat.ok { color:var(--ok); } .dstat.bad { color:var(--hot); white-space:normal; max-width:260px; text-align:right; } .dstat.wait { color:var(--mut); }
   a { color:var(--acc); }
   .card { background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 42%), var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 34px rgba(0,0,0,.42); padding:14px; margin-bottom:12px; }
   .label { font-size:11px; font-weight:650; letter-spacing:1.7px; text-transform:uppercase; color:#b9c6d4; }
@@ -114,6 +119,7 @@
   <div class="tabs">
     <button data-view="today" class="on">Today</button>
     <button data-view="all">All aged</button>
+    <button data-view="dealers">Dealers</button>
     <button data-view="hidden">Hidden</button>
   </div>
 
@@ -141,6 +147,16 @@
     <div id="all"></div>
   </section>
 
+  <section id="view-dealers" class="hidden">
+    <div class="card">
+      <div class="label">Dealers watched</div>
+      <p class="mut" id="dealerSummary">Loading…</p>
+      <input id="dq" placeholder="Search dealers: name, city, brand…" oninput="renderDealers()" style="margin-bottom:6px;">
+      <div id="dealerList"></div>
+      <p class="mut" style="margin-top:10px;">To add or remove a dealer, edit <code>dealers.csv</code> in the buy-list folder (Excel or Notepad). A homepage link is fine: the tool finds the used-inventory page itself.</p>
+    </div>
+  </section>
+
   <section id="view-hidden" class="hidden">
     <div class="card">
       <div class="label">Hidden dealers</div>
@@ -152,7 +168,9 @@
 <div id="toast"></div>
 
 <script>
-let PIN = localStorage.getItem("buylist_pin") || "";
+let PIN = "";
+try { PIN = localStorage.getItem("buylist_pin") || ""; } catch { /* storage blocked */ }
+let DEALERS = [];
 let STATUS = null, TODAY = null, HIDDEN = [];
 const KEYS = [];   // index → listing key, so buttons never embed site text
 let BROWSE = [];
@@ -183,7 +201,7 @@ async function api(path, opts = {}) {
   const r = await fetch("/api" + path, { ...opts, headers: { "Content-Type": "application/json", "x-pin": PIN, ...(opts.headers || {}) } });
   if (r.status === 401 && !opts._retried) {
     const p = (prompt("Buy List PIN:") || "").trim();
-    if (p) { PIN = p; localStorage.setItem("buylist_pin", p); return api(path, { ...opts, _retried: true }); }
+    if (p) { PIN = p; try { localStorage.setItem("buylist_pin", p); } catch { /* storage blocked */ } return api(path, { ...opts, _retried: true }); }
   }
   const body = await r.json().catch(() => ({}));
   if (!r.ok && r.status !== 202) throw new Error(body.error || "Error " + r.status);
@@ -372,6 +390,31 @@ async function browse() {
       : `<div class="card empty">No aged cars match.</div>`;
   } catch (e) { toast(e.message); }
 }
+async function loadDealers() {
+  DEALERS = await api("/dealers").catch(e => { toast(e.message); return []; });
+  const ok = DEALERS.filter(d => d.seen > 0).length, bad = DEALERS.filter(d => d.error).length;
+  const aged = DEALERS.reduce((n, d) => n + d.aged, 0);
+  document.getElementById("dealerSummary").textContent = !DEALERS.length ? "No dealers in dealers.csv yet."
+    : DEALERS[0].scanned ? `${DEALERS.length} dealers · ${ok} read on the last scan · ${bad} couldn't be read · ${num(aged)} aged cars on their lots`
+    : `${DEALERS.length} dealers, closest first. Counts appear after the first scan.`;
+  renderDealers();
+}
+function renderDealers() {
+  const terms = (document.getElementById("dq").value || "").toLowerCase().split(/\s+/).filter(Boolean);
+  const rows = DEALERS.filter(d => terms.every(t => `${d.name} ${d.city} ${d.state} ${d.type}`.toLowerCase().includes(t)));
+  document.getElementById("dealerList").innerHTML = rows.map(d => {
+    const tel = telHref(d.phone), site = safeUrl(d.url);
+    const stat = d.error ? `<span class="dstat bad">✕ ${esc(d.error)}</span>`
+      : d.seen ? `<span class="dstat ok">${d.aged} aged · ${num(d.seen)} on lot</span>`
+      : `<span class="dstat wait">${d.scanned ? "no cars read" : "not scanned yet"}</span>`;
+    return `<div class="drow">
+      <div><div style="font-weight:650;">${esc(d.name)} ${d.type ? `<span class="pill">${esc(d.type)}</span>` : ""}</div>
+        <div class="mut">${esc([d.city, d.state].filter(Boolean).join(", "))}${d.distance != null ? ` · ${Math.round(d.distance)} mi` : ""}${d.phone ? ` · ${tel ? `<a href="${tel}">${esc(d.phone)}</a>` : esc(d.phone)}` : ""}${site ? ` · <a class="link" href="${esc(site)}" target="_blank" rel="noopener">Website ↗</a>` : ""}</div></div>
+      ${stat}
+    </div>`;
+  }).join("") || `<p class="mut">No dealers match.</p>`;
+}
+
 async function loadHidden() {
   HIDDEN = await api("/hidden").catch(e => { toast(e.message); return []; });
   document.getElementById("hiddenList").innerHTML = HIDDEN.length
@@ -382,7 +425,8 @@ async function loadHidden() {
 for (const b of document.querySelectorAll(".tabs button")) {
   b.onclick = () => {
     for (const x of document.querySelectorAll(".tabs button")) x.classList.toggle("on", x === b);
-    for (const v of ["today", "all", "hidden"]) document.getElementById("view-" + v).classList.toggle("hidden", v !== b.dataset.view);
+    for (const v of ["today", "all", "dealers", "hidden"]) document.getElementById("view-" + v).classList.toggle("hidden", v !== b.dataset.view);
+    if (b.dataset.view === "dealers") loadDealers();
     if (b.dataset.view === "today") loadToday();
     if (b.dataset.view === "all") browse();
     if (b.dataset.view === "hidden") loadHidden();

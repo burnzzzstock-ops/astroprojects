@@ -6,7 +6,8 @@ import os from "node:os";
 import path from "node:path";
 import { config, ROOT } from "./config.js";
 import { readDb, withDb } from "./store.js";
-import { OUTCOMES, buildCallList, browseListings, recordOutcome, status, callListCsv } from "./buyList.js";
+import { OUTCOMES, buildCallList, browseListings, recordOutcome, status, callListCsv, dealerRoster } from "./buyList.js";
+import { readDealers } from "./sources/dealerSites.js";
 import { runScan, scanRunning } from "./scan.js";
 import { localDay } from "./util.js";
 
@@ -62,6 +63,10 @@ app.post("/api/scan", (req, res) => {
   }
   runScan({ trigger: "manual" }).catch((e) => console.error("[scan] failed:", e.message));
   res.status(202).json({ started: true });
+});
+
+app.get("/api/dealers", (req, res) => {
+  res.json(dealerRoster(readDb(), config, readDealers(config.sources.dealerSites.file)));
 });
 
 app.get("/api/hidden", (req, res) => {

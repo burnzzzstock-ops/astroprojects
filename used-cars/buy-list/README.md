@@ -10,7 +10,7 @@ no paid services, no hosting, no logins.
 - **Scans three free sources at 6:00 AM (Mon-Sat):**
   - **CarGurus** shows how many days every car has been listed. The tool reads it
     oldest-listed first within 100 miles.
-  - **Dealer websites** in `dealers.csv`, which comes filled in with 98 dealers
+  - **Dealer websites** in `dealers.csv`, which comes filled in with 313 dealers
     within about 100 miles (see below). Most don't show days listed, so the tool
     counts from the first day it sees each car (and uses an in-stock date when a
     site publishes one).
@@ -28,8 +28,9 @@ no paid services, no hosting, no logins.
   morning showing the drop since your call.
 - **Phone-friendly page** with tap-to-call, a CSV download for Excel, and print.
 
-Leave it running and the scan happens by itself. With ~100 dealer sites, the
-morning scan takes roughly 30-60 minutes; the list updates when it finishes. If the PC was off or asleep at
+Leave it running and the scan happens by itself. With ~300 dealer sites (read
+three at a time), the morning scan takes an hour or two; the list updates when it
+finishes. If the PC was off or asleep at
 6:00, it scans as soon as the PC is back on.
 
 ## Setup (Windows, one time)
@@ -42,13 +43,14 @@ morning scan takes roughly 30-60 minutes; the list updates when it finishes. If 
    on the desktop, and opens the page.
 4. Open **`config.json`** in Notepad and check `excludeSellers`: your own store's
    name has to be in there so your lot isn't on the list.
-5. Look over **`dealers.csv`** (Excel or Notepad). It comes with 98 dealers within
-   about 100 miles (Gulf Coast, Pascagoula/Picayune/Lucedale, Mobile,
-   Hattiesburg/Laurel, Slidell/Covington), found by web search on 2026-10-26.
-   **Not covered yet:** Baldwin County AL (Daphne, Fairhope, Foley), Mandeville,
-   Hammond and the New Orleans metro, and most independent lots in Mobile and
-   Hancock County. Some phones are call-tracking numbers. Delete lots you'd never
-   buy from and add any that are missing, one per row:
+5. Look over **`dealers.csv`** (Excel or Notepad). It comes with 313 dealers within
+   about 100 miles, closest first: the Mississippi Coast, Pascagoula to Picayune,
+   Hattiesburg/Laurel/Columbia, Mobile and Baldwin County, Slidell, the north
+   shore, Hammond and the New Orleans metro (171 franchise stores, 142
+   independent lots). They were found by web search on 2026-10-26, so expect a
+   few dead links and call-tracking phone numbers; the **Dealers** tab shows which
+   sites read and which didn't after each scan. Delete lots you'd never buy from
+   and add any that are missing, one per row:
 
    ```csv
    name,phone,city,state,zip,used_inventory_url,type
@@ -71,6 +73,8 @@ Open the **Buy List** shortcut, or go to http://localhost:4400.
 - **Whole lot: No answer / Left msg** logs it for every car at that dealer at once.
 - **Hide dealer** takes a lot off the list for good. Undo it on the **Hidden** tab.
 - **All aged** searches every aged car ("tacoma", "f-150 lariat", "gulfport").
+- **Dealers** lists every dealer being watched, closest first, with how many aged
+  cars each has and any site that couldn't be read on the last scan.
 - **CSV** and **Print** give you a paper copy of today's calls.
 
 ### Using it from a phone
@@ -95,6 +99,8 @@ firewall: allow it on **private** networks.
 | `sources.cargurus.maxPages` | 60 | How deep into CarGurus' oldest-first results to go |
 | `sources.marketcheck.apiKey` | "" | Optional free key from https://www.marketcheck.com/apis |
 | `sources.dealerSites.maxPagesPerDealer` | 8 | Pages or "load more" clicks per dealer site |
+| `sources.dealerSites.concurrency` | 3 | Dealer sites read at the same time |
+| `sources.dealerSites.dealerTimeoutMs` | 180000 | Give up on one site after this long (3 minutes) |
 
 ## When something doesn't work
 
@@ -116,7 +122,7 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 24 tests offline: the extractor against CarGurus, JSON-LD and
+`npm test` runs 29 tests offline: the extractor against CarGurus, JSON-LD and
 dealer-API data shapes; merging and price drops; ranking; call outcomes; and a full
 headless-browser scan against fake local copies of each kind of site. See
 `../../CLAUDE.md` for how it's built.

@@ -194,10 +194,17 @@ export async function fetchDealerSites(cfg, { context, log = () => {}, debugDir,
   const listings = [];
   const failed = [];
   let ok = 0;
-  for (const d of list) {
+  // A few sites at a time (different dealers, so still gentle on each one), and
+  // no single site can hold up the whole morning scan.
+  const timeoutMs = s.dealerTimeoutMs || 180000;
+  const one = async (d) => {
+    let timer;
     try {
-      const rows = await scrapeDealer(context, d, { maxPages: s.maxPagesPerDealer, delay: s.pageDelayMs, log, debugDir });
-      if (!rows.length) { failed.push({ name: d.name, error: "no cars found on the page" }); continue; }
+      const rows = await Promise.race([
+        scrapeDealer(context, d, { maxPages: s.maxPagesPerDealer, delay: s.pageDelayMs, log, debugDir }),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("site took too long to load")), timeoutMs); }),
+      ]);
+      if (!rows.length) { failed.push({ name: d.name, error: "no cars found on the page" }); return; }
       ok++;
       const distance = zipDistance(cfg.zip, d.zip || zipForCity(d.city, d.state));
       for (const l of rows) {
@@ -219,7 +226,14 @@ export async function fetchDealerSites(cfg, { context, log = () => {}, debugDir,
     } catch (e) {
       failed.push({ name: d.name, error: e.message.split("\n")[0] });
       log(`dealer site ${d.name} failed: ${e.message.split("\n")[0]}`);
+    } finally {
+      clearTimeout(timer);
     }
-  }
+  };
+  let next = 0;
+  const workers = Math.max(1, Math.min(s.concurrency || 3, list.length));
+  await Promise.all(Array.from({ length: workers }, async () => {
+    while (next < list.length) await one(list[next++]);
+  }));
   return { listings, dealersOk: ok, dealersFailed: failed, dealerCount: list.length };
 }

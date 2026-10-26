@@ -11,7 +11,7 @@ import { fetchMarketcheck } from "./sources/marketcheck.js";
 import { fetchCarGurus } from "./sources/cargurus.js";
 import { fetchDealerSites, readDealers } from "./sources/dealerSites.js";
 
-const LOCK_STALE_MS = 3 * 3600 * 1000; // a scan never takes this long; an older lock is from a crash
+const LOCK_STALE_MS = 6 * 3600 * 1000; // a scan never takes this long; an older lock is from a crash
 
 function lockFile(cfg) { return path.join(cfg.dataDir, "scan.lock"); }
 

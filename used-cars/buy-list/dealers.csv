@@ -1,99 +1,314 @@
 name,phone,city,state,zip,used_inventory_url,type
-Matt Bowers Nissan of South Mississippi,228-220-0800,D'Iberville,MS,39540,https://www.mbnissansouthms.com/used-inventory/index.htm,franchise
+CarSmart MS,228-392-3344,D'Iberville,MS,39540,https://www.carsmartms.net/cars-for-sale,independent
+Galleria BMW,228-207-6814,D'Iberville,MS,39540,https://www.galleriabmw.com/cars/used/,franchise
+Gulf Coast Mitsubishi,228-222-2277,D'Iberville,MS,39540,https://www.gulfcoastmitsubishi.com/used-vehicles/,franchise
+INFINITI of South Mississippi,228-344-2812,D'Iberville,MS,,https://www.infinitiofsm.com/used-vehicles/,franchise
 Mandal Buick GMC,(228) 396-4276,D'Iberville,MS,39540,https://www.mandalbuickgmc.com/,franchise
 Mandal Chrysler Dodge Jeep Ram,228-338-1237,D'Iberville,MS,39540,https://www.mandalcdjr.com/used-vehicles/,franchise
-Tameron Kia,(228) 679-5200,D'Iberville,MS,39540,https://www.tameronkia.com/searchused.aspx,franchise
+Matt Bowers Nissan of South Mississippi,228-220-0800,D'Iberville,MS,39540,https://www.mbnissansouthms.com/used-inventory/index.htm,franchise
 Mercedes-Benz of South Mississippi,,D'Iberville,MS,39540,https://www.mbofsm.com/,franchise
-J. Allen Toyota,(228) 261-9259,Gulfport,MS,39503,https://www.jallentoyota.com/,franchise
-Group 1 Honda Gulfport,228-231-9562,Gulfport,MS,39503,https://www.group1hondagulfport.com/,franchise
-Matt Bowers Hyundai Gulfport,(228) 285-7802,Gulfport,MS,39503,https://www.mattbowershyundaigulfport.com/used-inventory/index.htm,franchise
-Champion Chrysler Dodge Jeep Ram,228-678-7776,Gulfport,MS,39503,https://www.championcdmississippi.com/,franchise
-Turan Foley Chevrolet Buick,(228) 604-8836,Gulfport,MS,39503,https://www.turanfoley.com/,franchise
-Turan Foley Cadillac,,Gulfport,MS,,https://www.turanfoleycadillac.com/searchused.aspx,franchise
+Tameron Kia,(228) 679-5200,D'Iberville,MS,39540,https://www.tameronkia.com/searchused.aspx,franchise
+Volkswagen of South Mississippi,228-344-2822,D'Iberville,MS,39540,https://www.vwofsm.com/used-vehicles/,franchise
+Biloxi Auto Broker,228-641-0170,Biloxi,MS,,https://www.biloxiautobrokers.com/cars-for-sale,independent
 Bob Boyte Chevrolet,228-227-4078,Biloxi,MS,,https://www.bobboytechevy.com/,franchise
-Direct Auto,,Gulfport,MS,39507,https://directautoms.prod.overfuel.com/used-inventory,independent
-Cannon Ford of Pascagoula,228-762-2641,Pascagoula,MS,39567,https://www.cannonfordpascagoula.com/used-inventory/index.htm,franchise
-Coast Chevrolet,(228) 762-2711,Pascagoula,MS,39567,https://www.coastchevy.com/,franchise
-Cannon Coast Chrysler Dodge Jeep Ram,(228) 471-0424,Pascagoula,MS,39567,https://www.cannoncoastcdjr.com/,franchise
-Cannon Nissan of Moss Point,(228) 762-2644,Moss Point,MS,39563,https://www.cannonnissanmosspoint.com/,franchise
-Cannon Toyota,(228) 762-3533,Moss Point,MS,39563,https://www.cannontoyotamosspoint.com/,franchise
-Bob Boyte Honda,228-202-0200,Moss Point,MS,39563,https://www.bobboytehondamosspoint.com/,franchise
-Jason Pilger Hyundai,228-522-3413,Gautier,MS,39553,https://www.jasonpilgerhyundai.com/used-inventory/index.htm,franchise
-Walt Massey Chevrolet GMC,,Lucedale,MS,39452,https://www.waltmasseychevroletlucedale.com/used-vehicles/,franchise
-Walt Massey Chrysler Dodge Jeep Ram,(601) 673-4796,Lucedale,MS,39452,https://www.waltmasseycdjr.com/inventory/used,franchise
-Star Chevrolet,601-385-1017,Wiggins,MS,39577,https://www.starautosuperstore.com/searchused.aspx,franchise
-Geaux Ford,228-344-1184,Waveland,MS,39576,https://www.geauxford.net/,franchise
-Herring Ford Lincoln,(601) 798-8682,Picayune,MS,39466,https://www.herringfordlincoln.com/,franchise
-Nissan of Picayune,601-273-3546,Picayune,MS,39466,https://www.nissanofpicayune.com/used-vehicles/,franchise
-Mossy of Picayune GMC,(601) 215-8265,Picayune,MS,39466,https://www.mossyofpicayunegmc.com/used-vehicles/,franchise
-Mossy of Picayune Chevrolet,(601) 215-8265,Picayune,MS,39466,https://www.mossysuperstore.com/,franchise
-Suncoast Auto Sales,228-809-8740,Ocean Springs,MS,39564,https://www.suncoastautosales.com/,independent
-Wholesale Auto Group,228-900-9926,Ocean Springs,MS,39564,https://www.wholesaleautogroupoceansprings.com/,independent
-Gulf Hills Auto Sales,(228) 875-7771,Ocean Springs,MS,39564,https://www.gulfhillsautosales.com/newandusedcars,independent
-Coast Easy Autos,228-209-4987,Ocean Springs,MS,39564,https://coasteasyautos.com/,independent
+Satisfaction Auto,228-447-7737,Biloxi,MS,39531,https://www.satisfactionautos.com/newandusedcars,independent
 A-1 Auto Brokers,(228) 875-8252,Ocean Springs,MS,39564,https://www.a-1autobrokers.com/,independent
+Coast Easy Autos,228-209-4987,Ocean Springs,MS,39564,https://coasteasyautos.com/,independent
 EZ Credit Auto Sales,228-400-7273,Ocean Springs,MS,39564,https://www.salesezcreditauto.com/,independent
+Gulf Hills Auto Sales,(228) 875-7771,Ocean Springs,MS,39564,https://www.gulfhillsautosales.com/newandusedcars,independent
 Integrity Auto Sales,228-447-3404,Ocean Springs,MS,39564,https://buytheintegrityway.com/,independent
 Ocean Springs Auto Center,228-875-8000,Ocean Springs,MS,39564,https://oceanspringsautocenter.com/,independent
-Riverside Auto Sales,(228) 497-9574,Gautier,MS,39553,https://gulfcoastriverside.com/gautier-inventory,independent
+Suncoast Auto Sales,228-809-8740,Ocean Springs,MS,39564,https://www.suncoastautosales.com/,independent
+Wholesale Auto Group Ocean Springs,228-900-9926,Ocean Springs,MS,39564,https://www.wholesaleautogroupoceansprings.com/,independent
+Auto Pro Gulf Coast,228-300-7542,Gulfport,MS,39507,https://www.autoprogulfcoast.com/,independent
+Direct Auto,228-396-3222,Gulfport,MS,39507,https://www.directautoms.com/,independent
+Gulf Coast Exotic Auto,228-231-9672,Gulfport,MS,39507,https://www.gcexoticauto.com/inventory,independent
+Champion Chrysler Dodge Jeep Ram,228-678-7776,Gulfport,MS,39503,https://www.championcdmississippi.com/,franchise
+Group 1 Honda Gulfport,228-231-9562,Gulfport,MS,39503,https://www.group1hondagulfport.com/,franchise
+J. Allen Ford,228-567-4523,Gulfport,MS,39503,https://www.jallenford.com/inventory/used,franchise
+J. Allen Mazda,844-285-0128,Gulfport,MS,39503,https://www.jallenmazda.com/used-mazda-for-sale-in-gulfport-ms,franchise
+J. Allen Toyota,(228) 261-9259,Gulfport,MS,39503,https://www.jallentoyota.com/,franchise
+Matt Bowers Hyundai Gulfport,(228) 285-7802,Gulfport,MS,39503,https://www.mattbowershyundaigulfport.com/used-inventory/index.htm,franchise
+Riverside Auto Sales Gulfport,228-206-0264,Gulfport,MS,39503,https://gulfcoastriverside.com/gulfport-inventory,independent
+Turan Foley Chevrolet Buick,(228) 604-8836,Gulfport,MS,39503,https://www.turanfoley.com/,franchise
+Aussie Auto Action,228-382-3115,Gulfport,MS,39501,https://aussieautoms.com/newandusedcars,independent
+Cmore Cars,228-875-5556,Gulfport,MS,,http://a36080.cmorecars.com/,independent
+Next Level Autos LLC,228-206-5200,Gulfport,MS,39501,https://nextlevelautosms.com/newandusedcars,independent
+Nu-Way Auto Sales Gulfport,228-831-5899,Gulfport,MS,,https://www.nuwayauto.net/cars-for-sale,independent
+Turan Foley Cadillac,,Gulfport,MS,,https://www.turanfoleycadillac.com/searchused.aspx,franchise
+Jason Pilger Hyundai,228-522-3413,Gautier,MS,39553,https://www.jasonpilgerhyundai.com/used-inventory/index.htm,franchise
+Riverside Auto Sales Gautier,(228) 497-9574,Gautier,MS,39553,https://gulfcoastriverside.com/gautier-inventory,independent
 Springfield Motors,228-471-9003,Gautier,MS,39553,https://springfieldmotors.net/,independent
+BH Wholesale,228-284-2438,Long Beach,MS,39560,https://www.bh-wholesale.com/,independent
+Breezy Auto Sales,228-863-1011,Long Beach,MS,39560,https://breezyautosales.com/,independent
+Chuck Ryan Cars,228-864-9706,Long Beach,MS,39560,https://chuckryancars.com/,independent
+Exclusive Auto Brokers,228-731-3325,Long Beach,MS,39560,https://www.exclusiveautobrokersms.com/inventory/,independent
+Hancock Auto Annex,228-822-9555,Long Beach,MS,,https://www.hancockautoannex.com/,independent
+K & K Auto Sales LLC,228-284-2217,Long Beach,MS,39560,https://kandkautosalems.com/,independent
+Cannon Coast Chrysler Dodge Jeep Ram,(228) 471-0424,Pascagoula,MS,39567,https://www.cannoncoastcdjr.com/,franchise
+Cannon Ford of Pascagoula,228-762-2641,Pascagoula,MS,39567,https://www.cannonfordpascagoula.com/used-inventory/index.htm,franchise
+Coast Chevrolet,(228) 762-2711,Pascagoula,MS,39567,https://www.coastchevy.com/,franchise
 Prince Motors,228-990-2706,Pascagoula,MS,39567,https://princemotorsms.com/,independent
-Picayune Auto Sales,,Picayune,MS,39466,https://www.picayuneautosales.net/,independent
-Devore Auto Sales,601-590-1680,Picayune,MS,39466,https://devoreautosales.com/,independent
-Pearl River Wholesale,601-799-3180,Picayune,MS,39466,https://pearlriverwholesale.com/,independent
-B&M Auto Sales,601-799-5005,Picayune,MS,39466,https://www.bandmautosales.com/,independent
-Paul's Auto Sales of Picayune,,Picayune,MS,39466,https://paulsautosalesofpicayunems.com/newandusedcars,independent
-U-J Chevrolet,251-545-3772,Mobile,AL,36608,https://www.ujchevy.com/used-vehicles/,franchise
+Bob Boyte Honda,228-202-0200,Moss Point,MS,39563,https://www.bobboytehondamosspoint.com/,franchise
+Cannon Nissan of Moss Point,(228) 762-2644,Moss Point,MS,39563,https://www.cannonnissanmosspoint.com/,franchise
+Cannon Toyota,(228) 762-3533,Moss Point,MS,39563,https://www.cannontoyotamosspoint.com/,franchise
+Geaux Ford,228-344-1184,Waveland,MS,39576,https://www.geauxford.net/,franchise
+Julian Automotive,,Waveland,MS,39576,https://www.julianautomotive.com/,independent
+Premier Ford of Waveland,,Waveland,MS,39576,https://www.premierfordwaveland.com/,franchise
+Star Chevrolet,601-385-1017,Wiggins,MS,39577,https://www.starautosuperstore.com/searchused.aspx,franchise
+Walt Massey Chevrolet GMC,,Lucedale,MS,39452,https://www.waltmasseychevroletlucedale.com/used-vehicles/,franchise
+Walt Massey Chrysler Dodge Jeep Ram,(601) 673-4796,Lucedale,MS,39452,https://www.waltmasseycdjr.com/inventory/used,franchise
+Thrifty Used Cars & Tires,228-344-3277,Bay St. Louis,MS,,https://thriftyusedcarsandtires.com/newandusedcars,independent
+Albert Lincoln Automotive,(251) 259-5555,Mobile,AL,36608,https://www.albertlincoln.com/inventory/,independent
+CARBOXX,251-220-9185,Mobile,AL,36608,https://carboxx.com/,independent
+Ethan Hunt Automotive,(251) 639-8989,Mobile,AL,36608,https://www.ethanhuntauto.com/,independent
 Mullinax Ford of Mobile,251-227-8190,Mobile,AL,36608,https://mullinaxfordmobile.com/sale/used-cars-mobile-al,franchise
-AutoNation Ford Mobile,844-395-8798,Mobile,AL,36606,https://www.autonationfordmobile.com/used-inventory/index.htm,franchise
-Springhill Toyota,251-450-1000,Mobile,AL,36606,https://www.springhilltoyota.com/used-vehicles/,franchise
-Toyota West Mobile,,Mobile,AL,36695,https://www.toyotawestmobile.com/used-vehicles/,franchise
-Hyundai of Mobile,,Mobile,AL,,https://www.hyundaiofmobile.com/used-vehicles/,franchise
-Jubilee Chrysler Dodge Jeep Ram,251-512-4747,Mobile,AL,36606,https://www.jubileecdjr.com/,franchise
+Skco Automotive,(251) 343-4488,Mobile,AL,36608,https://www.skcoautomotive.com/used-vehicles-for-sale,independent
+U-J Chevrolet,251-545-3772,Mobile,AL,36608,https://www.ujchevy.com/used-vehicles/,franchise
 Ross Downing Chrysler Dodge Jeep Ram of Mobile,251-319-5143,Mobile,AL,36695,https://www.encorechryslerdodgejeepram.com/used-vehicles/,franchise
+Toyota West Mobile,,Mobile,AL,36695,https://www.toyotawestmobile.com/used-vehicles/,franchise
+Car Zone Auto LLC,251-408-9654,Semmes,AL,,https://carzautollc.com/,independent
+Eleven Automotive LLC,251-300-8155,Semmes,AL,36575,https://elevenautomotivellc.com/newandusedcars,independent
+Hooney's Auto Sales,251-653-4470,Theodore,AL,36582,https://hooneysautosales.com/newandusedcars,independent
+Just Miles Auto Sales,(251) 341-7047,Semmes,AL,,https://www.justmilesautosales.com/,independent
+Lawson Auto Sales,(251) 292-1877,Semmes,AL,,https://www.lawsonautosalesllc.com/cars-for-sale,independent
+LCM Motorcars,251-375-0068,Theodore,AL,,https://www.davidmccrary.com/cars-for-sale,independent
+Opulent Auto Group,(985) 298-8412,Semmes,AL,,https://www.opulentautogroup.com/cars-for-sale,independent
+Stevens Auto Sales,(251) 653-1393,Theodore,AL,,https://www.stevensautosalesal.com/,independent
+Wholesale Auto Group Mobile,251-348-7522,Mobile,AL,36619,https://www.wholesaleautogroupllc.net/,independent
+Cottage Hill Motors,251-602-6815,Mobile,AL,36609,https://cottagehillmotors.com/newandusedcars,independent
+Ron's Auto Sales,(251) 554-1717,Mobile,AL,36693,https://www.ronsautosalesmobile.com/,independent
+Alabama Auto Sales,(251) 322-7068,Mobile,AL,36618,https://www.alabamaautosale.com/,independent
+B&M Auto Sales,601-799-5005,Picayune,MS,39466,https://www.bandmautosales.com/,independent
+CARMASTERS,251-319-2621,Mobile,AL,36618,https://www.carmastersal.com/,independent
+Devore Auto Sales,601-590-1680,Picayune,MS,39466,https://devoreautosales.com/,independent
+Herring Ford Lincoln,(601) 798-8682,Picayune,MS,39466,https://www.herringfordlincoln.com/,franchise
+Mossy of Picayune Chevrolet,(601) 215-8265,Picayune,MS,39466,https://www.mossysuperstore.com/,franchise
+Mossy of Picayune GMC,(601) 215-8265,Picayune,MS,39466,https://www.mossyofpicayunegmc.com/used-vehicles/,franchise
+Nissan of Picayune,601-273-3546,Picayune,MS,39466,https://www.nissanofpicayune.com/used-vehicles/,franchise
+Paul's Auto Sales of Picayune,,Picayune,MS,39466,https://paulsautosalesofpicayunems.com/newandusedcars,independent
+Pearl River Wholesale,601-799-3180,Picayune,MS,39466,https://pearlriverwholesale.com/,independent
+Picayune Auto Sales,,Picayune,MS,39466,https://www.picayuneautosales.net/,independent
+2741 Autosales,251-217-2102,Mobile,AL,36606,https://www.2741autosales.com/,independent
+Audi Mobile,251-200-4072,Mobile,AL,36606,https://www.audimobileal.com/en/,franchise
+AutoNation Ford Mobile,844-395-8798,Mobile,AL,36606,https://www.autonationfordmobile.com/used-inventory/index.htm,franchise
 AutoNation Honda at Bel Air Mall,855-579-0315,Mobile,AL,36606,https://www.autonationhondaatbelairmall.com/,franchise
+BMW of Mobile,,Mobile,AL,36606,https://www.bmwofmobile.com/pre-owned-vehicles/,franchise
+CarZone of Mobile,(251) 473-1000,Mobile,AL,36606,https://www.carzonemobile.com/,independent
+Dean McCrary Kia,(251) 471-3326,Mobile,AL,36606,https://www.deanmccrarykia.com/used-inventory/index.htm,franchise
+Dean McCrary Mazda,251-459-8885,Mobile,AL,36606,https://www.deanmccrarymazda.com/used-inventory/index.htm,franchise
+Dean Mitchell Auto Mall,251-338-7444,Mobile,AL,36606,https://www.deanmitchellcars.com/used-cars/,independent
+INFINITI of Mobile,(251) 732-4849,Mobile,AL,36606,https://www.infinitiofmobile.com/used-vehicles/,franchise
+Joe Bullard Acura,251-237-9447,Mobile,AL,36606,https://www.joebullardacura.com/,franchise
 Joe Bullard Cadillac,251-263-8830,Mobile,AL,36606,https://www.joebullardcadillac.com/used-cars/,franchise
 Joe Bullard Chevrolet,251-234-6927,Mobile,AL,36606,https://www.joebullardchevrolet.com/used-vehicles/,franchise
-Joe Bullard Acura,251-237-9447,Mobile,AL,36606,https://www.joebullardacura.com/,franchise
-Lexus of Mobile,251-261-0813,Mobile,AL,,https://www.lexusofmobile.com/used-vehicles/,franchise
-BMW of Mobile,,Mobile,AL,36606,https://www.bmwofmobile.com/pre-owned-vehicles/,franchise
-Toyota of Hattiesburg,601-544-9630,Hattiesburg,MS,39402,https://www.toyotahattiesburg.com/search/used-hattiesburg-ms/?cy=39402&tp=used,franchise
-Hattiesburg Cars,877-385-5455,Hattiesburg,MS,39401,https://www.hattiesburgcars.com/search/used-hattiesburg-ms/?cy=39401&tp=used,independent
-Pine Belt Ford,601-264-5555,Hattiesburg,MS,39402,https://www.pinebeltford.com/used-vehicles/,franchise
-Pine Belt Chrysler Dodge Jeep Ram,601-550-6792,Hattiesburg,MS,39402,https://www.pinebeltcdjr.com/used-vehicles/,franchise
-Pine Belt Chevrolet,601-264-8500,Hattiesburg,MS,39402,https://www.mypinebeltchevy.com/used-vehicles/,franchise
-Pine Belt Honda,,Hattiesburg,MS,,https://www.pinebelthonda.com/,franchise
-Kia of Hattiesburg,601-544-4007,Hattiesburg,MS,39402,https://www.kiaofhattiesburg.com/used-inventory/index.htm,franchise
-Mack Grubbs Hyundai,601-705-0790,Hattiesburg,MS,39402,https://www.mackgrubbshyundai.com/,franchise
-Dossett GMC Cadillac,601-620-4750,Hattiesburg,MS,39401,https://www.dossettgmc.com/searchused.aspx,franchise
-Craft Auto Sales,601-583-2802,Hattiesburg,MS,39401,https://www.craftautosales.com/,independent
-Cameron Motor Company,601-545-8088,Hattiesburg,MS,,https://www.cameronmotorcompany.com/newandusedcars,independent
-Lincoln Road Autoplex,844-647-0363,Hattiesburg,MS,39402,https://www.lincolnroadautoplex.com/newandusedcars,independent
-Fairchild Motors,,Hattiesburg,MS,,https://fairchildmotors.com/,independent
-Pace Auto Sales,601-602-4500,Hattiesburg,MS,39402,https://www.paceautosales.com/,independent
-Car Time,601-336-6328,Hattiesburg,MS,39402,https://www.cartimesaysyes.com/,independent
-Broadway Motors,,Hattiesburg,MS,39401,https://www.broadwaymotorsllc.com/,independent
-Mississippi Motors,601-450-7047,Hattiesburg,MS,39401,https://www.mississippimotors.net/,independent
-Nu-Way Auto Sales,,Hattiesburg,MS,39401,https://www.nuwayautoshattiesburg.com/,independent
-Laurel Ford Lincoln,601-649-4511,Laurel,MS,39440,https://www.laurelfordlincoln.com/used-inventory/index.htm,franchise
-Kia of Laurel,601-649-4511,Laurel,MS,39440,https://www.kiaoflaurelms.com/used-inventory/index.htm,franchise
-Legacy GMC of Laurel,601-651-4358,Laurel,MS,39440,https://www.legacygmcoflaurel.com/searchused.aspx,franchise
-Cannon Nissan of Laurel,601-674-8341,Laurel,MS,39440,https://www.cannonnissanoflaurel.com/,franchise
-Kim's Chrysler Dodge Jeep Ram,601-283-3081,Laurel,MS,39440,https://www.kimschryslerdodgejeep.com/search/used-laurel-ms/?cy=39440&tp=used,franchise
-Kim's Toyota,601-283-3081,Laurel,MS,39440,https://www.kimsnobull.com/,franchise
-Hillside Motors,601-649-5104,Laurel,MS,,https://www.hillsidemotorsms.com/newandusedcars,independent
-Laurel Motor Sales,,Laurel,MS,,https://www.laurelmotorsale.com/used-cars?Size=9999,independent
-Supreme Ford of Slidell,888-927-9934,Slidell,LA,70461,https://www.supremefordofslidell.com/searchused.aspx,franchise
+Jubilee Chrysler Dodge Jeep Ram,251-512-4747,Mobile,AL,36606,https://www.jubileecdjr.com/,franchise
+McConnell Buick GMC,251-545-3780,Mobile,AL,36606,https://www.mcconnellautomotive.com/,franchise
+Mercedes-Benz of Mobile,251-472-2369,Mobile,AL,36606,https://www.mbofmobile.com/pre-owned-inventory/index.htm,franchise
+Mobile Mitsubishi,251-263-9521,Mobile,AL,36606,https://www.mobilemitsubishi.com/search/used-mobile-al/?cy=36606&tp=used,franchise
+Pearl Motors,(251) 479-5439,Mobile,AL,36606,https://www.pearlmotors.us/used-vehicles-mobile-al,independent
+Porsche Mobile,251-459-8995,Mobile,AL,36606,https://mobile.porsche.com/en/inventory/porsche/search?condition=porsche_approved,franchise
+Springhill Toyota,251-450-1000,Mobile,AL,36606,https://www.springhilltoyota.com/used-vehicles/,franchise
+Tameron Nissan,251-264-7700,Mobile,AL,36606,https://www.tameronnissan.com/searchused.aspx,franchise
+Tameron Subaru,251-300-5081,Mobile,AL,36606,https://www.tameronsubaru.com/used-vehicles/,franchise
+Volkswagen of Mobile,(251) 301-1690,Mobile,AL,36606,https://www.volkswagenmobile.com/used-inventory/index.htm,franchise
+Volvo Cars Mobile,(251) 301-1780,Mobile,AL,36606,https://www.volvocarsmobile.com/used-inventory/index.htm,franchise
 Carlock Toyota of Slidell,(985) 643-0005,Slidell,LA,70461,https://www.carlocktoyotaofslidell.com/,franchise
-Supreme Nissan of Slidell,(833) 397-6207,Slidell,LA,70461,https://www.supremenissanofslidell.com/searchused.aspx,franchise
-Matt Bowers Chevrolet,(985) 718-0055,Slidell,LA,70461,https://www.mattbowersauto.com/used-inventory/index.htm,franchise
-Matt Bowers Hyundai Slidell,(985) 607-7760,Slidell,LA,70461,https://www.mattbowershyundai.com/,franchise
-Lakeshore Chrysler Dodge Jeep Ram,985-214-1868,Slidell,LA,70461,https://www.lakeshorechryslerdodgejeep.com/,franchise
+Lakeshore Chrysler Dodge Jeep Ram Slidell,985-214-1868,Slidell,LA,70461,https://www.lakeshorechryslerdodgejeep.com/,franchise
 Lakeshore Kia,,Slidell,LA,70461,https://www.lakeshorekia.com/inventory/used,franchise
 Legacy Buick GMC,985-288-1846,Slidell,LA,70461,https://www.legacybuickgmc.com/,franchise
-Price Is Right Auto Sales,(985) 282-2713,Slidell,LA,70458,https://www.priceisrightusedcars.com/cars-for-sale,independent
-Express Auto Sales East,(985) 201-7035,Slidell,LA,70458,https://www.expressautoeast.com/cars-for-sale,independent
+Matt Bowers Chevrolet Slidell,(985) 718-0055,Slidell,LA,70461,https://www.mattbowersauto.com/used-inventory/index.htm,franchise
+Matt Bowers Hyundai Slidell,(985) 607-7760,Slidell,LA,70461,https://www.mattbowershyundai.com/,franchise
+Supreme Ford of Slidell,888-927-9934,Slidell,LA,70461,https://www.supremefordofslidell.com/searchused.aspx,franchise
+Supreme Nissan of Slidell,(833) 397-6207,Slidell,LA,70461,https://www.supremenissanofslidell.com/searchused.aspx,franchise
 Audler Auto Sales,(985) 847-0629,Slidell,LA,70458,https://www.audlerautosales.net/cars-for-sale,independent
+Express Auto Sales East,(985) 201-7035,Slidell,LA,70458,https://www.expressautoeast.com/cars-for-sale,independent
+Price Is Right Auto Sales,(985) 282-2713,Slidell,LA,70458,https://www.priceisrightusedcars.com/cars-for-sale,independent
+AutoMax of Mobile,251-776-6666,Mobile,AL,,https://www.automaxofmobile.com/,independent
+CAR LAND,251-604-5500,Mobile,AL,,https://www.carlandmobile.com/cars-for-sale,independent
+Deep South Automotive,251-333-5700,Mobile,AL,,https://www.deepsouthauto.rocks/,independent
+Hyundai of Mobile,,Mobile,AL,,https://www.hyundaiofmobile.com/used-vehicles/,franchise
+Lexus of Mobile,251-261-0813,Mobile,AL,,https://www.lexusofmobile.com/used-vehicles/,franchise
+Mobile Luxury Motors,,Mobile,AL,,https://www.mobileluxurymotors.com/,independent
+Regal Motors,251-634-4036,Mobile,AL,,https://regalmotorsmobile.com/,independent
+Sam Mitchell Automotive,251-333-0333,Mobile,AL,,https://www.sammitchellautomotive.com/docs/vehicle_search.html,independent
+Sun Coast City Auto Sales,(251) 551-1031,Mobile,AL,,https://www.suncoastcity.com/cars-for-sale,independent
+A & A Wholesalers,251-378-8350,Saraland,AL,,https://www.aandawholesalers.net/default,independent
+Captain Ron's Auto,251-675-2800,Saraland,AL,,https://www.captainronsauto.com/all.htm,independent
+Star Imports,251-675-7400,Saraland,AL,36571,https://www.starimportsauto.com/,independent
+Cannon Nissan Eastern Shore,251-626-5558,Daphne,AL,,https://www.easternshorenissan.com/searchused.aspx,franchise
+Coal Wholesale LLC,251-689-7744,Daphne,AL,,https://www.coalwholesale.com/,independent
+Eastern Shore Auto Brokers,251-621-1006,Daphne,AL,36526,https://www.easternshoreautobrokers.com/,independent
+Eastern Shore Hyundai,251-415-5681,Daphne,AL,36526,https://www.easternshorehyundai.com/used-vehicles/,franchise
+Eastern Shore Toyota,251-625-1919,Daphne,AL,36526,https://www.easternshoretoyota.com/used-vehicles/,franchise
+Eastern Shore Used Car Center,251-697-0064,Daphne,AL,,https://www.easternshoreusedcarcenter.com/,independent
+Golden Auto Sales,251-990-9820,Fairhope,AL,,https://goldenautofairhope.com/,independent
+Independent Auto Brokers,251-660-4444,Daphne,AL,36526,https://www.independentautobrokersinc.com/newandusedcars.aspx,independent
+Kia of Daphne,251-374-0644,Daphne,AL,36526,https://www.kiaofdaphne.com/searchused.aspx,franchise
+Robert Edward's Automotive,251-800-7177,Fairhope,AL,36532,https://www.daphneautomotive.com/inventory/,independent
+Sandy Sansing Ford Lincoln,251-626-7777,Daphne,AL,,https://www.sandysansingford.com/used-vehicles/,franchise
+Tameron Buick GMC,251-263-7146,Daphne,AL,,https://www.tameronbuickgmc.com/used-cars-daphne-al.htm,franchise
+Tameron Chrysler Dodge Jeep Ram,251-706-7228,Daphne,AL,,https://www.tameroncdjrf.com/used-inventory/index.htm,franchise
+Tameron Honda Eastern Shore,251-621-1686,Daphne,AL,36526,https://www.tameronhondaeasternshore.com/inventory?type=used,franchise
+Terry Thompson Chevrolet,251-626-0631,Daphne,AL,36526,https://www.terrythompsonchevrolet.com/used-inventory/index.htm,franchise
+Volkswagen of Daphne,251-374-0664,Daphne,AL,36526,https://www.vwofdaphne.com/,franchise
+Ironclad Collective,,Bogalusa,LA,,https://www.ironclad-collective.com/inventory/,independent
+Ricky Crain's Best Buy Autoplex,985-732-1577,Bogalusa,LA,,https://rcbestbuyautoplex.org/,independent
+Sun Auto Sales LLC,,Bogalusa,LA,,https://www.sunautosales.org/,independent
+Autoplus Car Sales,601-238-3045,Hattiesburg,MS,39401,https://autopluscarsalesms.com/inventory,independent
+Broadway Motors,,Hattiesburg,MS,39401,https://www.broadwaymotorsllc.com/,independent
+Cameron Motor Company,601-545-8088,Hattiesburg,MS,,https://www.cameronmotorcompany.com/newandusedcars,independent
+Craft Auto Sales,601-583-2802,Hattiesburg,MS,39401,https://www.craftautosales.com/,independent
+Custom Truck Concepts,601-602-1996,Hattiesburg,MS,39401,https://customtruckconcepts.com/,independent
+Dossett GMC Cadillac,601-620-4750,Hattiesburg,MS,39401,https://www.dossettgmc.com/searchused.aspx,franchise
+Fairchild Motors,,Hattiesburg,MS,,https://fairchildmotors.com/,independent
+Hattiesburg Cars,877-385-5455,Hattiesburg,MS,39401,https://www.hattiesburgcars.com/search/used-hattiesburg-ms/?cy=39401&tp=used,independent
+Imperial Automotive LLC,601-402-7950,Hattiesburg,MS,39401,https://www.imperialautoms.com/used-cars-in-hattiesburg-ms/,independent
+Mississippi Motors,601-450-7047,Hattiesburg,MS,39401,https://www.mississippimotors.net/,independent
+Nu-Way Auto Sales Hattiesburg,,Hattiesburg,MS,39401,https://www.nuwayautoshattiesburg.com/,independent
+Pacific Products,,Hattiesburg,MS,,https://www.pacificproductsms.com/cars-for-sale,independent
+Pine Belt Honda,,Hattiesburg,MS,,https://www.pinebelthonda.com/,franchise
+JF Auto LLC,601-453-1975,Petal,MS,39465,https://jfautopetal.com/,independent
+Strahan Auto Sales,601-450-0105,Petal,MS,39465,https://strahanauto.com/newandusedcars,independent
+Auto Locators,601-584-7028,Hattiesburg,MS,39402,https://autolocatorms.com/newandusedcars,independent
+Car Time,601-336-6328,Hattiesburg,MS,39402,https://www.cartimesaysyes.com/,independent
+Kia of Hattiesburg,601-544-4007,Hattiesburg,MS,39402,https://www.kiaofhattiesburg.com/used-inventory/index.htm,franchise
+Lincoln Road Autoplex,844-647-0363,Hattiesburg,MS,39402,https://www.lincolnroadautoplex.com/newandusedcars,independent
+Mack Grubbs Hyundai,601-705-0790,Hattiesburg,MS,39402,https://www.mackgrubbshyundai.com/,franchise
+Pace Auto Sales,601-602-4500,Hattiesburg,MS,39402,https://www.paceautosales.com/,independent
+Pine Belt Chevrolet,601-264-8500,Hattiesburg,MS,39402,https://www.mypinebeltchevy.com/used-vehicles/,franchise
+Pine Belt Chrysler Dodge Jeep Ram,601-550-6792,Hattiesburg,MS,39402,https://www.pinebeltcdjr.com/used-vehicles/,franchise
+Pine Belt Ford,601-264-5555,Hattiesburg,MS,39402,https://www.pinebeltford.com/used-vehicles/,franchise
+Toyota of Hattiesburg,601-544-9630,Hattiesburg,MS,39402,https://www.toyotahattiesburg.com/search/used-hattiesburg-ms/?cy=39402&tp=used,franchise
+Banner Ford,,Mandeville,LA,70471,https://www.bannerford.com/used,franchise
+Delta Auto Brokers,251-240-0091,Loxley,AL,36551,https://www.deltaautobrokers.com/,independent
+Gulf Motor Company,251-272-1000,Loxley,AL,36551,https://gulfmotorcompany.com/,independent
+Gulfsands Automotive,251-948-4123,Gulf Shores,AL,,https://gulfsandsauto.com/,independent
+Motorworks Auto Sales,504-610-4283,Mandeville,LA,70471,http://www.masllc.info/,independent
+Premier Honda,504-380-9722,New Orleans,LA,70128,https://www.premierhonda.com/,franchise
+Prius Gurus,,Mandeville,LA,,https://priusgurus.com/,independent
+Rare Motors,251-202-7255,Loxley,AL,36551,https://www.raremotorsllc.com/,independent
+Unique Classic Cars,251-605-0117,Loxley,AL,36551,https://www.uniqueclassiccars.us/,independent
+Varsity Auto Group,(985) 951-3560,Mandeville,LA,70471,https://www.thevarsityauto.com/,independent
+Volkswagen of Mandeville,985-626-1067,Mandeville,LA,70471,https://www.vwmandeville.com/,franchise
+Wholesale Solutions Inc,,Loxley,AL,36551,https://wholesalesolutionsloxleyalabama.com/,independent
+Baldwin Subaru,(985) 892-2204,Covington,LA,,https://www.baldwinmotors.com/used-inventory/index.htm,franchise
+Bill Hood Chevrolet,985-590-4102,Covington,LA,70433,https://www.hoodchevy.com/searchused.aspx,franchise
+Eddie Tourelle Hyundai,(985) 801-7000,Covington,LA,,https://www.eddietourellehyundai.com/used-vehicles/,franchise
+Eddie Tourelle's Northpark Nissan,985-202-8477,Covington,LA,,https://www.northparknissan.com/,franchise
+Genesis of Covington,985-800-0274,Covington,LA,,https://www.genesisofcovington.com/,franchise
 Honda of Covington,(985) 892-0001,Covington,LA,70433,https://www.hondaofcovington.com/used-vehicles/,franchise
 Kia of Covington,,Covington,LA,70433,https://kiaofcovington.com/inventory/used,franchise
-Bill Hood Chevrolet,985-590-4102,Covington,LA,70433,https://www.hoodchevy.com/searchused.aspx,franchise
+Mercedes-Benz of Covington,(877) 232-4627,Covington,LA,,https://www.mbofcovington.com/used-vehicles/,franchise
+Northlake Auto Covington,(985) 306-2631,Covington,LA,,https://www.northlakeautosales.com/cars-for-sale,independent
+Northshore Toyota,(985) 893-7778,Covington,LA,,https://www.northshoretoyota.com/used-vehicles/,franchise
+Paretti Mazda of Covington,(985) 888-5320,Covington,LA,,https://www.parettimazdaofcovington.com/used-vehicles/,franchise
+Rainbow Chrysler Dodge Jeep Ram,(985) 892-9165,Covington,LA,70433,https://www.rainbowchryslerdodgejeep.net/used-inventory/index.htm,franchise
+Rainbow Luxury Imports,877-431-6659,Covington,LA,70433,https://www.rainbowluxuryimports.com/search/used-covington-la/?cy=70433&tp=used,independent
+Rainbow Mitsubishi North,(985) 809-0056,Covington,LA,70433,https://www.rainbowmitsubishinorth.com/inventory/used,franchise
+Rainbow Northshore Buick GMC,(888) 494-1484,Covington,LA,,https://www.rainbownorthshore.com/used-vehicles/,franchise
+Southern Brothers Auto Sales,(985) 234-9343,Covington,LA,,https://www.southernbrothersautos.com/,independent
+Twin-Tree Motors,(985) 234-9926,Covington,LA,,https://www.twin-treemotors.com/,independent
+Beachin' Car Dudes,251-401-3826,Foley,AL,,https://beachincardudes.com/,independent
+Coastal Auto Group,251-972-2277,Foley,AL,,https://972cars.com/,independent
+Fairway Auto Brokers,251-333-4849,Foley,AL,,https://www.fairwayfoley.com/,independent
+iCars Automall,251-220-4373,Foley,AL,36535,https://www.icarsautomall.com/,independent
+M & D Auto Sales,251-971-2222,Foley,AL,,https://www.manddautos.com/newandusedcars,independent
+Moyer Ford Sales,251-943-1661,Foley,AL,36535,https://www.moyerfordsales.com/,franchise
+Premier Clearance Center of St. Bernard,504-265-9601,Chalmette,LA,,https://premierclearancecenterofstbernard.com/,independent
+Premiere Autosports LLC,251-284-1698,Foley,AL,,https://premiereautosportsal.com/,independent
+Sandy Sansing CDJR of Foley,251-215-4089,Foley,AL,,https://www.cdjroffoley.com/,franchise
+Sandy Sansing Chevrolet of Foley,251-301-8408,Foley,AL,,https://www.chevroletoffoley.com/,franchise
+Sandy Sansing Nissan of Foley,251-240-6805,Foley,AL,36535,https://nissanoffoley.com/used-inventory/index.htm,franchise
+Triple B Autos,251-970-2886,Foley,AL,,https://www.triplebautos.com/,independent
+Chuck Stevens Chevrolet of Bay Minette,251-215-4615,Bay Minette,AL,,https://www.chuckstevensofbayminette.com/used-cars/bay-minette-alabama.htm,franchise
+Chuck Stevens Dodge Chrysler Jeep Ram,251-937-1000,Bay Minette,AL,,https://www.chuckstevensdodgechryslerjeep.com/used-inventory/index.htm,franchise
+Chuck Stevens Ford,251-937-2961,Bay Minette,AL,,https://www.chuckstevensford.com/used-inventory/index.htm,franchise
+Mercer Motors,205-238-8066,Bay Minette,AL,,https://www.mercermotorsal.com/cars-for-sale,independent
+Banner Chevrolet,504-242-2000,New Orleans,LA,70126,https://www.bannerchevy.com/used,franchise
+Carz4You,251-213-3411,Robertsdale,AL,36567,https://www.carz4you.com/,independent
+iKon Automotive,251-300-7949,Robertsdale,AL,,https://ikonautomotive.com/,independent
+Under 10 Automotive,251-964-2064,Robertsdale,AL,,https://www.under10automotive.com/,independent
+Zach's Auto Sales,251-391-5666,Robertsdale,AL,36567,https://zachsautosales.com/newandusedcars,independent
+Elite Motors,601-633-0862,Columbia,MS,39429,https://elitemotorsms.com/inventory,independent
+KOLKARS,601-736-4222,Columbia,MS,39429,https://www.kolkars.com/newandusedcars,independent
+Mossy Motors,504-708-2978,New Orleans,LA,,https://www.mossymotors.com/,franchise
+The Auto Exchange Auto Sales,601-736-4333,Columbia,MS,39429,https://autoexchangems.com/newandusedcars,independent
+Toyota of New Orleans,,New Orleans,LA,,https://www.toyotaofneworleans.com/used-vehicles/,franchise
+Walt Massey CDJR Columbia,601-731-1953,Columbia,MS,39429,https://www.waltmasseycdjrcolumbia.com/inventory/used,franchise
+Walt Massey Chevrolet Columbia,601-731-1953,Columbia,MS,39429,https://www.waltmasseychevroletcolumbia.com/used-vehicles/,franchise
+Walt Massey Ford Columbia,,Columbia,MS,,https://www.waltmasseyfordcolumbia.com/inventory/used,franchise
+Xtreme Chrysler Dodge Jeep Ram,,New Orleans,LA,,https://www.xtremecdjr.com/inventory/used,franchise
+Xtreme Nissan,,New Orleans,LA,,https://www.xtremenissan.com/,franchise
+Ford of Harvey,504-387-9030,Harvey,LA,,https://www.fordofharvey.com/used-vehicles/,franchise
+Group 1 Toyota West Bank,,Harvey,LA,,https://www.group1toyotawestbank.com/,franchise
+Leson Chevrolet,504-708-4002,Harvey,LA,70058,https://www.lesonauto.com/,franchise
+Premier Chrysler Dodge Jeep Ram of Harvey,504-389-1708,Harvey,LA,70058,https://www.premiercdjrharvey.com/used-vehicles/,franchise
+Premier Hyundai of Harvey,504-684-4572,Harvey,LA,70058,https://www.premierhyundaiofharvey.com/used-vehicles/,franchise
+Premier Nissan of Harvey,,Harvey,LA,70058,https://www.premiernissanofharvey.com/used-vehicles/,franchise
+Premier Volkswagen of Harvey,,Harvey,LA,,https://www.premiervwharvey.com/used-vehicles/,franchise
+Tameron Kia Westbank,504-264-6132,Harvey,LA,70058,https://www.tameronkiawestbank.com/pre-owned-vehicles/,franchise
+Bergeron Volvo Cars,504-293-5201,Metairie,LA,70002,https://www.bergeronvolvocars.com/used-inventory/index.htm,franchise
+Lakeside Toyota,504-520-4300,Metairie,LA,70002,https://www.lakesidetoyota.com/used-vehicles/,franchise
+Matt Bowers INFINITI Metairie,504-832-2005,Metairie,LA,70002,https://www.mattbowersinfiniti.com/pre-owned-vehicles,franchise
+Mercedes-Benz of New Orleans,504-264-5079,Metairie,LA,70002,https://www.mbofno.com/used-vehicles/,franchise
+Paretti Mazda Metairie,504-456-7600,Metairie,LA,70002,https://www.parettimazda.com/used-vehicles/,franchise
+Audi New Orleans,504-838-8000,Metairie,LA,,https://www.audineworleans.com/en/inventory/used/shop-all-pre-owned-metairie-la/,franchise
+Bergeron Chrysler Dodge Jeep Ram,504-285-6494,Metairie,LA,,https://www.bergeronchryslerjeep.com/used-inventory/index.htm,franchise
+Crown Buick GMC,504-517-0840,Metairie,LA,70001,https://www.crownbuickgmc.com/used-vehicles/,franchise
+Land Rover New Orleans,,Metairie,LA,,https://www.landroverneworleans.com/,franchise
+Matt Bowers Chevrolet Metairie,,Metairie,LA,,https://www.mbchevymetairie.com/used-inventory/index.htm,franchise
+Mattingly Motors,504-889-7933,Metairie,LA,,https://www.mattinglymotors.com/searchused.aspx,independent
+Metairie Motors,,Metairie,LA,,https://www.metairiemotors.com/,independent
+Porsche of New Orleans,,Metairie,LA,,https://www.porscheofneworleans.com/used-vehicles/,franchise
+Premier Clearance Center,504-383-7468,Metairie,LA,,https://www.premierclearance.com/,independent
+Royal Honda,,Metairie,LA,,https://www.royalhonda.com/searchused.aspx,franchise
+Used Car Connect,504-490-1000,Metairie,LA,,https://usedcarconnect.com/,independent
+AutoMax Marrero,504-328-1445,Marrero,LA,,https://www.automaxmarrero.com/,independent
+Cadillac of New Orleans,504-517-0849,Metairie,LA,70006,https://www.neworleanscadillac.com/searchused.aspx,franchise
+Westbank Auto Group,504-340-6000,Marrero,LA,,https://westbankautogroup.com/,independent
+Bryan Subaru,504-446-2200,Metairie,LA,70003,https://www.bryansubaru.com/used-inventory/index.htm,franchise
+Lexus of New Orleans,504-688-4301,Metairie,LA,70003,https://www.lexusneworleans.com/used-vehicles/,franchise
+Matt Bowers Hyundai Metairie,504-838-9000,Metairie,LA,70003,https://www.hyundaiofmetairie.com/,franchise
+Premier Nissan of Metairie,504-455-5800,Metairie,LA,70003,https://www.premiernissan.net/used-vehicles/,franchise
+Walker Acura,504-464-4004,Metairie,LA,70003,https://www.walkeracura.com/used-inventory/index.htm,franchise
+Best Chevrolet,504-273-7048,Kenner,LA,,https://www.bestchevrolet.com/searchused.aspx,franchise
+Kenner AutoMax,,Kenner,LA,70062,https://kennerautomax.com/inventory,independent
+Lakeshore Chrysler Dodge Jeep Ram of Kenner,504-229-5200,Kenner,LA,70065,https://www.lakeshorekenner.com/searchused.aspx,franchise
+Lamarque Ford,504-443-2500,Kenner,LA,,https://www.lamarque.com/used-inventory/index.htm,franchise
+Lamarque Lincoln,504-463-1200,Kenner,LA,,https://www.lamarquelincoln.com/,franchise
+Peake BMW,504-469-6165,Kenner,LA,,https://peakebmw.com/cars/pre-owned-inventory,franchise
+Premier Kia of Kenner,504-370-8471,Kenner,LA,70062,https://www.premierkia.com/,franchise
+Toyota of Kenner,504-285-2672,Kenner,LA,70062,https://www.toyotaofkenner.net/,franchise
+Wholesale Auto Group Kenner,,Kenner,LA,,https://123getauto.com/inventory,independent
+Cannon Chevrolet of Laurel,601-651-4274,Laurel,MS,,https://www.cannonchevroletoflaurel.com/,franchise
+Cannon Nissan of Laurel,601-674-8341,Laurel,MS,39440,https://www.cannonnissanoflaurel.com/,franchise
+Hillside Motors,601-649-5104,Laurel,MS,,https://www.hillsidemotorsms.com/newandusedcars,independent
+Kia of Laurel,601-649-4511,Laurel,MS,39440,https://www.kiaoflaurelms.com/used-inventory/index.htm,franchise
+Kim's Chrysler Dodge Jeep Ram,601-283-3081,Laurel,MS,39440,https://www.kimschryslerdodgejeep.com/search/used-laurel-ms/?cy=39440&tp=used,franchise
+Kim's Toyota,601-283-3081,Laurel,MS,39440,https://www.kimsnobull.com/,franchise
+Laurel Ford Lincoln,601-649-4511,Laurel,MS,39440,https://www.laurelfordlincoln.com/used-inventory/index.htm,franchise
+Laurel Motor Sales,,Laurel,MS,,https://www.laurelmotorsale.com/used-cars?Size=9999,independent
+Legacy GMC of Laurel,601-651-4358,Laurel,MS,39440,https://www.legacygmcoflaurel.com/searchused.aspx,franchise
+Berryland Motors,985-370-7000,Ponchatoula,LA,,https://berrylandmotors.com/used,independent
+Gateway Ford,(985) 386-7790,Ponchatoula,LA,70454,https://www.gatewayford.net/,franchise
+Dykes Motors,,Collins,MS,,https://dykesmotors.com/,independent
+Woolwine Ford Lincoln,601-765-4461,Collins,MS,39428,https://www.woolwineford.com/used-inventory/index.htm,franchise
+Bill Hood Ford Lincoln,(985) 345-1590,Hammond,LA,,https://www.billhoodfordhammond.com/used-inventory/index.htm,franchise
+Bill Hood Hyundai,985-240-2047,Hammond,LA,70401,https://www.billhoodhyundai.com/,franchise
+Bill Hood Nissan,985-273-5427,Hammond,LA,70401,https://www.billhoodnissan.com/,franchise
+Cajun Autos,985-318-7423,Hammond,LA,,https://cajunautos.com/,independent
+Cashio's Auto Sales,(985) 318-7020,Hammond,LA,70401,https://www.cashioautosales.com/inventory/,independent
+Northlake Auto Hammond,985-543-6648,Hammond,LA,,https://www.northlakehammond.com/,independent
+Prime Auto Wholesale LLC,(985) 412-7527,Hammond,LA,,https://www.primeautowholesalellc.com/cars-for-sale,independent
+Ross Downing Cadillac,,Hammond,LA,,https://www.rossdowningcadillac.com/searchused.aspx,franchise
+Ross Downing CDJR,,Hammond,LA,,https://www.rossdowningcdjr.com/used-inventory/index.htm,franchise
+Ross Downing Chevrolet,,Hammond,LA,,https://www.rossdowningchevrolet.com/searchused.aspx,franchise
+Ross Downing GMC,,Hammond,LA,,https://www.rossdowninggmc.com/searchused.aspx,franchise
+Ross Downing Used Cars,(985) 254-0900,Hammond,LA,,https://www.rossdowningusedcars.com/searchused.aspx,independent
+Supreme Toyota,,Hammond,LA,,https://www.supremetoyota.com/searchused.aspx,franchise
+Bayou Chrysler Dodge Jeep Ram,985-652-9600,LaPlace,LA,,https://www.bayouchryslerdodgejeepram.com/,franchise
+Bayou Ford,985-652-0935,LaPlace,LA,,https://www.bayouford.net/searchused.aspx,franchise
+Falasteen Motors,504-474-6372,LaPlace,LA,,https://www.falasteenmotors.com/,independent
+Geaux Chevrolet,,LaPlace,LA,,https://www.geauxautomotive.com/dealers/geaux-chevrolet-llc/,franchise
+Lamarque Crescent City Ford,,Harahan,LA,70123,https://www.lamarquecrescentfordtrucks.com/used-inventory/index.htm,franchise

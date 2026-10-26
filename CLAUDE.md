@@ -38,11 +38,14 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
     when nothing is read. Automated use is against CarGurus' terms (the operator chose it knowingly).
     **Untested against the live site** (the dev sandbox can't reach it); the operator runs it and
     sends debug files.
-  - `dealerSites.js`: one page per `dealers.csv` row. `dealers.csv` is TRACKED and was pre-filled
-    on 2026-10-26 with 98 dealers within 100 mi, researched by web search only (URLs/phones seen
-    in results, never fetched; 46 rows are homepages). Gaps: Baldwin County AL, Mandeville /
-    Hammond / New Orleans metro, Mobile and Hancock County independents. A missing zip falls back
-    to `zipForCity(city, state)` for distance. A homepage link (`isHomepage`) is resolved
+  - `dealerSites.js`: one page per `dealers.csv` row. `dealers.csv` is TRACKED and pre-filled
+    (2026-10-26) with 313 dealers within 98 mi (MS 111, AL 98, LA 104), sorted closest-first. They
+    were researched by web search only: URLs and phones were seen in results but never fetched, and
+    many rows are homepages. Same-name stores carry the city in their name ("Wholesale Auto Group
+    Kenner"), so they don't merge into one card. A missing zip falls back to `zipForCity(city, state)`
+    (also splits "LaPlace"). Sites are read `concurrency` (3) at a time with a per-site
+    `dealerTimeoutMs` (3 min). Some groups (e.g. Sandy Sansing) show group-wide inventory on every
+    store's site, so cars get attributed to whichever row read them last. A homepage link (`isHomepage`) is resolved
     to the site's used-inventory page via `findUsedLink` (same-site links scored on used/pre-owned
     text, with new/service/etc. penalized). Reads JSON responses, JSON-LD and
     `script[type=application/json]`, then a DOM fallback (VINs printed on the page; climbs to the
@@ -71,15 +74,17 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   LLC/Inc; private sellers get one key per car), plus up to 6 per card riding along, with
   negotiating cars pinned. Outcomes: no_answer +1d, left_message +2d, too_high +10d,
   not_selling +21d, negotiating, bought, pass, reopen. Due days are local calendar days.
+- **Dealers tab** (`dealerRoster` in buyList.js, `GET /api/dealers`): every dealers.csv row with
+  distance, aged count, cars seen on its site in 3 days, and the last scan's error for it.
 - **Server** (`src/server.js`): Express 5 on 127.0.0.1, or 0.0.0.0 only when `allowPhoneAccess`
   AND `accessPin` are set (non-local requests need the PIN). Manual scan has a 30-min cooldown.
   The scheduler ticks every 5 min: on scan days at/after `scanTime`, it runs once per day if no
-  scheduled scan ran today (catches up after sleep). `data/scan.lock` (3h stale) prevents
+  scheduled scan ran today (catches up after sleep). `data/scan.lock` (6h stale) prevents
   overlap with `npm run scan`.
 - **Page** (`public/index.html`): dark, phone-first, tap-to-call. Buttons reference cars by index
   (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all
   text is escaped.
-- **Tests:** `npm test` (node --test, 24 tests, offline). `test/scan.test.mjs` runs a real headless
+- **Tests:** `npm test` (node --test, 29 tests, offline). `test/scan.test.mjs` runs a real headless
   browser against an Express server that copies each site shape: CarGurus feed (400 cars,
   oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,
   dealer API + Next, JSON-LD, plain HTML + Load more, and a broken site.

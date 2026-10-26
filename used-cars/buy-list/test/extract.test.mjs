@@ -114,4 +114,5 @@ test("ZIP from city/state when a dealer row has none", () => {
   assert.equal(zipForCity("Bay St. Louis", "MS"), "39520");
   assert.equal(zipForCity("Hattiesburg", "ms"), "39401");
   assert.equal(zipForCity("Nowhere Town", "MS"), null);
+  assert.equal(zipForCity("LaPlace", "LA"), "70068");
 });

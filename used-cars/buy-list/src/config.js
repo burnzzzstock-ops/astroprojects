@@ -29,7 +29,8 @@ export const DEFAULTS = {
   sources: {
     cargurus: { enabled: true, maxPages: 60, pageDelayMs: 2500 },
     marketcheck: { enabled: true, apiKey: "", maxPages: 15, monthlyCallCap: 450 },
-    dealerSites: { enabled: true, file: "dealers.csv", maxPagesPerDealer: 8, pageDelayMs: 1500 },
+    // concurrency = dealer sites read at once; dealerTimeoutMs = give up on one site after this long
+    dealerSites: { enabled: true, file: "dealers.csv", maxPagesPerDealer: 8, pageDelayMs: 1500, concurrency: 3, dealerTimeoutMs: 180000 },
   },
   dataDir: "data",
 };

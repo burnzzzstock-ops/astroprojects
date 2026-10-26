@@ -47,34 +47,53 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   - `dealerSites.js`: one page per `dealers.csv` row. `dealers.csv` is TRACKED and pre-filled
     (2026-10-26) with 313 dealers within 98 mi (MS 111, AL 98, LA 104), sorted closest-first. They
     were researched by web search only: URLs and phones were seen in results but never fetched, and
-    many rows are homepages. Same-name stores carry the city in their name ("Wholesale Auto Group
+    many rows are homepages. After the first live run it's 308: closed dealers removed (Breezy Auto
+    Sales, Hooney's, Autoplus, iKon: dead or parked domains with no other web presence; Premier
+    Clearance Center of St. Bernard: dead, the Metairie store is its own row) and moved sites fixed
+    (Turan Foley → turanfoleychevrolet.com, Encore CDJR → rossdowningcdjrmobile.com, Fairway →
+    fairwayautobrokers.com, Tameron Honda Eastern Shore → /searchused.aspx). Same-name stores carry the city in their name ("Wholesale Auto Group
     Kenner"), so they don't merge into one card. A missing zip falls back to `zipForCity(city, state)`
     (also splits "LaPlace"). Sites are read `concurrency` (3) at a time with a per-site
     `dealerTimeoutMs` (3 min). Some groups (e.g. Sandy Sansing) show group-wide inventory on every
     store's site, so cars get attributed to whichever row read them last. A homepage link (`isHomepage`) is resolved
     to the site's used-inventory page via `findUsedLink` (same-site links scored on used/pre-owned
-    text, with new/service/etc. penalized). Reads JSON responses, JSON-LD and
+    text, with new/service/etc. penalized; "#" menu toggles skipped; with no used link at all, a
+    plain "Inventory" / "All Inventory" link, which is how most independent lots label it). Reads JSON responses, JSON-LD and
     `script[type=application/json]`, then a DOM fallback: (1) VINs printed on the page, starting
     from the smallest element holding both "VIN" and the number (a leaf, or
     `<p><label>VIN:</label> 1FT…</p>` as on DealerCarSearch `/newandusedcars` sites), climbing to the
     single-VIN card; (2) if no VINs at all (Carsforsale.com `/cars-for-sale` keeps the VIN on the
     detail page), one car per same-site detail link with a model year in its path, keyed by that
-    link. Cards marked sold with no price are skipped. Scrolls, then clicks next/load-more, with
-    `settle()` waiting for the page to go quiet. CSV contact info overrides scraped dealer info;
-    distance comes from the zip via the free `zipcodes` table.
+    link. Cards marked sold with no price are skipped; a VIN card's link prefers the dealer's own
+    site over Carfax. A feed car with a VIN but no price takes the price from its card on screen
+    (re-checked on every read, since prices can draw after the feed). Scrolls, then clicks
+    next/load-more, with `settle()` waiting for the page to go quiet; with nothing to click it
+    follows `<link rel="next">` (DealerOn's `?pt=2`, whose pager is drawn later by script). CSV
+    contact info overrides scraped dealer info; distance comes from the zip via the free
+    `zipcodes` table.
     **Live run 2026-10-26:** Dealer Inspire sites (Cloudflare, "Sorry, you have been blocked") and
     Dealer.com sites (Akamai, "Access Denied") answer the headless browser with HTTP 403. That's
     a deliberate bot block, so it's reported, not worked around. `looksBlocked` reads only the title,
     the visible text and wall-vendor markup (`captcha-delivery.com`, Incapsula, PerimeterX):
     reading raw HTML flagged normal pages that load reCAPTCHA or a "captcha-field" widget. A
-    blocked site saves `dealer-<name>-blocked-*.html/png` to `data/debug`.
+    blocked site saves `dealer-<name>-blocked-*.html/png` to `data/debug`. First full pass (before
+    the fixes above): 136 read, 21 read 0 cars, 137 HTTP 403, 12 unreachable, 2×404, 2×503, 2
+    timeouts, 1 link that downloads a file. Platforms that read: DealerOn (`/searchused.aspx`),
+    space.auto, Carsforsale.com, DealerCarSearch, AutoCorner (`/docs/vehicle_search.html`), and
+    the small-lot `inventory.php` sites. Known leftovers: sites with broken TLS/redirect loops/
+    octet-stream pages (Eleven Automotive, Paul's of Picayune, Independent Auto Brokers), inventory
+    inside a third-party iframe (2741 Autosales/AutoRevo on Wix), no inventory online (Wholesale
+    Solutions, Captain Ron's).
   - `marketcheck.js`: v2 `/search/car/active`, FREE tier only (key optional). `dom_range`
     filter, 50 rows per call, `start` = offset. Monthly cap tracked in `db.marketcheckCalls[YYYY-MM]`.
 - **Generic extractor** (`src/extract.js`): walks any JSON for listing-like objects (valid VIN with
   no I/O/Q, or price + year + name + miles) and reads each field from an alias list (daysOnMarket,
   inStockDate, serviceProviderName, phoneNumberString, JSON-LD offers/seller/address…). One
   extractor serves every site, so a renamed field means adding an alias, not a rewrite.
-  `inventoryDate` (space.auto dealer sites) counts as an in-stock date.
+  `inventoryDate` (space.auto dealer sites) counts as an in-stock date. DealerOn's feed uses
+  `Vehicle*` names (`VehicleVin`, `VehicleName`, `TaggingPrice`, `VehicleDetailUrl`) with an in-stock
+  date in `VehicleTaggingInventoryDate`; when `TaggingPrice` is 0 the price is "Selling Price" in its
+  base64 `VehiclePriceLibrary`. AutoCorner's `/json/srp_vehicles.json` uses `vehicle_*` names.
 - **Merge** (`src/listings.js`): keyed by VIN (else `source:id`). Dealer cards: `resolveDealerKey`
   maps other sources' names onto `db.csvDealers` (the dealers.csv names). It merges when one
   normalized name contains the other (2+ words) and the state matches, with city as the
@@ -103,11 +122,12 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
 - **Page** (`public/index.html`): dark, phone-first, tap-to-call. Buttons reference cars by index
   (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all
   text is escaped.
-- **Tests:** `npm test` (node --test, 33 tests, offline). `test/scan.test.mjs` runs a real headless
+- **Tests:** `npm test` (node --test, 35 tests, offline). `test/scan.test.mjs` runs a real headless
   browser against an Express server that copies each site shape: CarGurus feed (400 cars,
   oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,
   dealer API + Next, JSON-LD, plain HTML + Load more, "VIN:" label cards, VIN-less
-  Carsforsale-style cards, and a broken site. `test/extract.test.mjs` includes the live CarGurus
-  feed shape and bot-wall vs reCAPTCHA pages.
+  Carsforsale-style cards, a homepage with only "Inventory", DealerOn-style `rel=next` paging with
+  a price only on the page, and a broken site. `test/extract.test.mjs` includes the live CarGurus,
+  DealerOn and AutoCorner feed shapes and bot-wall vs reCAPTCHA pages.
 - **Next ideas:** list dealers seen on CarGurus that aren't in dealers.csv yet; an
   offer-range hint from comparable cars in the data.

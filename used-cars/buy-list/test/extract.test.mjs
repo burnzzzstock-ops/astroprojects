@@ -52,6 +52,29 @@ test("live CarGurus feed shape (2026-10): bare array, city with state, photo obj
   assert.equal(b.dealer.city, "Biloxi");
 });
 
+test("DealerOn feed: Vehicle* fields, in-stock date, price from VehiclePriceLibrary when TaggingPrice is 0", () => {
+  const lib = Buffer.from("MSRP:0.0;Selling Price:18873.0;reff_Flat Low Price:18873.0;calc_INTERNET PRICE:19822.0").toString("base64");
+  const since = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10).replace(/-/g, "/");
+  const [l] = extractListings({ DisplayCards: [{ VehicleVin: "1FTEX1EP5JF000013", VehicleYear: 2020, VehicleMake: "Ford", VehicleModel: "Explorer",
+    VehicleTrim: "Platinum", VehicleName: "2020 Ford Explorer Platinum", TaggingPrice: 0, VehicleInternetPrice: 0, VehiclePriceLibrary: lib,
+    Mileage: "66,585 mi", VehicleStockNumber: "5-1076A", VehicleTaggingInventoryDate: since, VehicleCondition: "Used",
+    VehicleDetailUrl: "https://dealer.example/used-Mobile-2020-Ford-Explorer-Platinum-1FTEX1EP5JF000013" }] });
+  assert.deepEqual([l.vin, l.year, l.make, l.model, l.trim], ["1FTEX1EP5JF000013", 2020, "Ford", "Explorer", "Platinum"]);
+  assert.equal(l.price, 18873);
+  assert.equal(l.miles, 66585);
+  assert.equal(l.stock, "5-1076A");
+  assert.ok(Math.abs(l.daysListed - 40) <= 1);
+  assert.equal(l.isNew, false);
+});
+
+test("AutoCorner feed (/json/srp_vehicles.json): vehicle_* fields", () => {
+  const [l] = extractListings({ total_count: 1, filtered_vehicles: [{ vehicle_id: "F5518A60", vehicle_stocknum: "P198",
+    vehicle_caption: "2012 Gmc Acadia SLT-1 AWD", vehicle_vin: "1FTEX1EP5JF000014", vehicle_year: "2012", vehicle_make: "Gmc",
+    vehicle_model: "Acadia", vehicle_trim: "SLT-1 AWD", vehicle_miles: "147306", vehicle_price: "5888", vehicle_sale_price: "" }] });
+  assert.deepEqual([l.vin, l.year, l.make, l.model, l.trim, l.title], ["1FTEX1EP5JF000014", 2012, "Gmc", "Acadia", "SLT-1 AWD", "2012 Gmc Acadia SLT-1 AWD"]);
+  assert.deepEqual([l.price, l.miles, l.stock], [5888, 147306, "P198"]);
+});
+
 test("schema.org JSON-LD car on a dealer page (strings with $ and commas, nested offers/seller)", () => {
   const ld = parseJsonLoose(JSON.stringify({
     "@context": "https://schema.org", "@type": "Car", name: "2019 Jeep Wrangler Sport",

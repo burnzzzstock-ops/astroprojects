@@ -8,26 +8,26 @@ import { toNumber, daysSince } from "./util.js";
 const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/i;
 
 const K = {
-  vin: ["vin", "vehicleIdentificationNumber", "vinNumber", "vin_number"],
-  year: ["year", "modelYear", "carYear", "vehicleModelDate", "model_year", "yearNumber"],
-  make: ["make", "makeName", "brand", "manufacturer", "make_name"],
-  model: ["model", "modelName", "model_name"],
-  trim: ["trim", "trimName", "trim_name", "vehicleConfiguration", "series"],
-  title: ["listingTitle", "title", "heading", "vehicleTitle", "name"],
+  vin: ["vin", "vehicleIdentificationNumber", "vinNumber", "vin_number", "vehicleVin", "vehicle_vin"],
+  year: ["year", "modelYear", "carYear", "vehicleModelDate", "model_year", "yearNumber", "vehicleYear", "vehicle_year"],
+  make: ["make", "makeName", "brand", "manufacturer", "make_name", "vehicleMake", "vehicle_make"],
+  model: ["model", "modelName", "model_name", "vehicleModel", "vehicle_model"],
+  trim: ["trim", "trimName", "trim_name", "vehicleConfiguration", "series", "vehicleTrim", "vehicle_trim"],
+  title: ["listingTitle", "title", "heading", "vehicleTitle", "vehicleName", "vehicle_caption", "name"],
   price: ["price", "listPrice", "askingPrice", "internetPrice", "salePrice", "sellingPrice", "finalPrice",
-    "displayPrice", "priceValue", "retailPrice", "currentPrice"],
+    "displayPrice", "priceValue", "retailPrice", "currentPrice", "taggingPrice", "vehicle_sale_price", "vehicle_price"],
   // (not "expectedPrice": on CarGurus that's their market-value estimate, not the asking price)
   prevPrice: ["previousPrice", "originalPrice", "oldPrice", "ref_price", "wasPrice", "priceBeforeDrop", "lastPrice"],
-  miles: ["mileage", "miles", "odometer", "mileageFromOdometer", "odometerReading", "mileageValue"],
+  miles: ["mileage", "miles", "odometer", "mileageFromOdometer", "odometerReading", "mileageValue", "vehicleMileage", "vehicle_miles"],
   days: ["daysOnMarket", "daysOnLot", "daysInStock", "daysListed", "dom", "daysOnCarGurus", "ageInDays",
     "daysInInventory", "days_on_market"],
   since: ["inStockDate", "dateInStock", "stockDate", "listedDate", "firstListedDate", "datePosted", "listingDate",
-    "postedDate", "dateListed", "first_seen_at_date", "dateFirstListed", "inventoryDate"],
-  url: ["vdpUrl", "vdp_url", "listingUrl", "detailUrl", "detailsUrl", "vehicleUrl", "url", "link", "href"],
+    "postedDate", "dateListed", "first_seen_at_date", "dateFirstListed", "inventoryDate", "vehicleTaggingInventoryDate"],
+  url: ["vdpUrl", "vdp_url", "listingUrl", "detailUrl", "detailsUrl", "vehicleUrl", "vehicleDetailUrl", "url", "link", "href"],
   photo: ["primaryPhotoUrl", "imageUrl", "mainPhotoUrl", "thumbnailUrl", "pictureUrl", "photoUrl", "image", "photo",
     "thumbnail", "images", "photos", "photo_links", "originalPictureData", "pictureData"],
   color: ["exteriorColor", "exterior_color", "extColor", "colorName", "color"],
-  stock: ["stockNumber", "stockNo", "stock_no", "stockNum", "stock", "sku"],
+  stock: ["stockNumber", "stockNo", "stock_no", "stockNum", "stock", "sku", "vehicleStockNumber", "vehicle_stocknum"],
   condition: ["condition", "itemCondition", "vehicleCondition", "newOrUsed", "stockType", "inventoryType"],
   isNew: ["isNew", "newCar", "isNewCar"],
   distance: ["distance", "dist", "distanceInMiles"],
@@ -70,6 +70,13 @@ function urlOf(v) {
   if (typeof v === "object") return urlOf(v.url ?? v.href ?? v.src ?? v.contentUrl ?? null);
   const s = String(v).trim();
   return /^(https?:)?\/\//i.test(s) || s.startsWith("/") ? s : null;
+}
+// DealerOn sites can leave TaggingPrice at 0 and keep the price only in a base64
+// "VehiclePriceLibrary" ("MSRP:32895.0;Selling Price:32895.0;…").
+function priceLibrary(v) {
+  if (typeof v !== "string" || !v) return null;
+  const s = Buffer.from(v, "base64").toString("utf8");
+  return toNumber((s.match(/(?:^|;)Selling Price:([\d.]+)/i) || [])[1]);
 }
 // CarGurus sends sellerCity as "Gulfport, MS": keep just the city.
 function cityOnly(v) {
@@ -158,7 +165,7 @@ export function normalizeObject(obj) {
     vin: vinRaw && VIN_RE.test(vinRaw) ? vinRaw.toUpperCase() : null,
     year, make, model, trim,
     title: title || [year, make, model, trim].filter(Boolean).join(" ") || null,
-    price: toNumber(pick(m, K.price)) ?? toNumber(offers?.price),
+    price: toNumber(pick(m, K.price)) ?? toNumber(offers?.price) ?? priceLibrary(m.get("vehiclepricelibrary")),
     prevPrice: toNumber(pick(m, K.prevPrice)),
     miles: toNumber(pick(m, K.miles)),
     daysListed: days ?? (sinceDays != null ? Math.round(sinceDays) : null),

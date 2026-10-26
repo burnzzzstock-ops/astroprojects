@@ -10,7 +10,7 @@ no paid services, no hosting, no logins.
 - **Scans three free sources at 6:00 AM (Mon-Sat):**
   - **CarGurus** shows how many days every car has been listed. The tool reads it
     oldest-listed first within 100 miles.
-  - **Dealer websites** in `dealers.csv`, which comes filled in with 313 dealers
+  - **Dealer websites** in `dealers.csv`, which comes filled in with 308 dealers
     within about 100 miles (see below). Most don't show days listed, so the tool
     counts from the first day it sees each car (and uses an in-stock date when a
     site publishes one).
@@ -43,10 +43,10 @@ finishes. If the PC was off or asleep at
    on the desktop, and opens the page.
 4. Open **`config.json`** in Notepad and check `excludeSellers`: your own store's
    name has to be in there so your lot isn't on the list.
-5. Look over **`dealers.csv`** (Excel or Notepad). It comes with 313 dealers within
+5. Look over **`dealers.csv`** (Excel or Notepad). It comes with 308 dealers within
    about 100 miles, closest first: the Mississippi Coast, Pascagoula to Picayune,
    Hattiesburg/Laurel/Columbia, Mobile and Baldwin County, Slidell, the north
-   shore, Hammond and the New Orleans metro (171 franchise stores, 142
+   shore, Hammond and the New Orleans metro (171 franchise stores, 137
    independent lots). They were found by web search on 2026-10-26, so expect a
    few dead links and call-tracking phone numbers; the **Dealers** tab shows which
    sites read and which didn't after each scan. Delete lots you'd never buy from
@@ -122,7 +122,7 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 33 tests offline: the extractor against CarGurus, JSON-LD and
+`npm test` runs 35 tests offline: the extractor against CarGurus, JSON-LD and
 dealer-API data shapes; merging and price drops; ranking; call outcomes; and a full
 headless-browser scan against fake local copies of each kind of site. See
 `../../CLAUDE.md` for how it's built.

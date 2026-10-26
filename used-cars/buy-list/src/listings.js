@@ -140,9 +140,14 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
         if (v && (o.source === "dealer" || !l.dealer[k])) l.dealer[k] = v;
       }
     }
-    // On a dealers.csv dealer's card: its CSV phone/city fill in what this source left out.
+    // On a dealers.csv dealer's card the CSV phone is the number to call, whichever source the
+    // car came from (CarGurus often shows a call-tracking number, e.g. a 417 area code for a
+    // Biloxi lot); its city/state fill in what the source left out.
     const known = db.csvDealers[l.dealerKey];
-    if (known) for (const k of ["phone", "city", "state"]) if (known[k] && !l.dealer[k]) l.dealer[k] = known[k];
+    if (known) {
+      if (known.phone) l.dealer.phone = known.phone;
+      for (const k of ["city", "state"]) if (known[k] && !l.dealer[k]) l.dealer[k] = known[k];
+    }
     if (o.price) l.srcPrice[o.source] = o.price;
     if (o.url) l.urls[o.source] = o.url;
     if (o.daysListed != null) l.reported[o.source] = { days: o.daysListed, at };

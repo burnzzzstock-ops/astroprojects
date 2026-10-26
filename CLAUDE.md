@@ -100,8 +100,9 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
 - **Merge** (`src/listings.js`): keyed by VIN (else `source:id`). Dealer cards: `resolveDealerKey`
   maps other sources' names onto `db.csvDealers` (the dealers.csv names). Every scan registers ALL
   dealers.csv rows there with their phone (`registerCsvDealers`), not only the ones whose site
-  read, so a blocked dealer's CarGurus cars land on its card and take the CSV phone/city when
-  the source has none (CarGurus often has no phone). It merges when one
+  read, so a blocked dealer's CarGurus cars land on its card. On a CSV dealer's card the CSV phone
+  always wins (CarGurus often shows a call-tracking number, e.g. a 417 area code for a Biloxi lot)
+  and the CSV city/state fill gaps. It merges when one
   normalized name contains the other (2+ words) and the state matches, with city as the
   tie-breaker; anything ambiguous stays separate. Dealer-source rows are applied first in each scan.
   A VIN-less dealer-site car and a VIN'd car from another source on the same dealer card with the

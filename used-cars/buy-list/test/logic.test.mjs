@@ -47,10 +47,15 @@ test("a dealers.csv dealer whose site can't be read still gets other sources' ca
   const { registerCsvDealers } = await import("../src/listings.js");
   const db = freshDb();
   registerCsvDealers(db, [{ name: "Example Motors of Gulfport", phone: "(228) 555-0130", city: "Gulfport", state: "MS" }]);
-  applyObservations(db, [obs(0, { dealer: { name: "Example Motors", phone: null, city: "Gulfport", state: "MS", zip: "39501" }, dealRating: "NA" })], config);
+  applyObservations(db, [
+    obs(0, { dealer: { name: "Example Motors", phone: null, city: "Gulfport", state: "MS", zip: "39501" }, dealRating: "NA" }),
+    obs(1, { dealer: { name: "Example Motors", phone: "(417) 555-0199", state: "MS", zip: "39501" } }), // a call-tracking number
+  ], config);
   const l = db.listings[obs(0).vin];
   assert.equal(l.dealerKey, "example motors of gulfport", "on the dealers.csv card");
   assert.equal(l.dealer.phone, "(228) 555-0130", "CSV phone when CarGurus has none");
+  assert.equal(db.listings[obs(1).vin].dealer.phone, "(228) 555-0130", "CSV phone wins over the source's");
+  assert.equal(db.listings[obs(1).vin].dealer.city, "Gulfport", "CSV city fills in");
   assert.ok(!B.scoreListing(l, { days: 120 }).why.some((w) => /CarGurus/.test(w)), "no 'CarGurus: Na' chip");
 });
 

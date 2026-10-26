@@ -18,7 +18,8 @@ no paid services, no hosting, no logins.
     It's skipped unless you add a free key.
 - **One record per car.** The same VIN on several sources is merged, and "days
   listed" is the longest any source reports.
-- **Ranks every car with a reason for each point:** days listed, price drops,
+- **Fords first, then cars under 80,000 miles,** then everything else; nothing under $10,000.
+  Within each group it ranks every car with a reason for each point: days listed, price drops,
   distance, and anything that changed since your last call.
 - **Groups by dealer**, so one call covers every aged car on that lot. Private
   sellers each get their own card.
@@ -96,7 +97,9 @@ firewall: allow it on **private** networks.
 | --- | --- | --- |
 | `zip`, `radiusMiles` | 39540, 100 | Center and radius of the search |
 | `minDaysListed` / `maxDaysListed` | 60 / 365 | "Listed a long time" window; past 365 days is usually a dead listing |
-| `minPrice`, `maxMiles` | 4000, 175000 | Skip junk |
+| `minPrice`, `maxMiles` | 10000, 175000 | Skip junk |
+| `focusMakes` | ["Ford"] | Makes ranked first (add "Lincoln" etc.; `[]` = off) |
+| `focusUnderMiles` | 80000 | Then cars under this many miles (`0` = off) |
 | `dailyListSize` | 25 | Cars on today's list |
 | `topListSize` | 10 | Cars in the "Top 10 today" list |
 | `scanTime`, `scanDays` | "06:00", Mon-Sat | When the morning scan runs (0 = Sunday) |
@@ -128,7 +131,7 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 36 tests offline: the extractor against CarGurus, JSON-LD and
+`npm test` runs 38 tests offline: the extractor against CarGurus, JSON-LD and
 dealer-API data shapes; merging and price drops; ranking; call outcomes; and a full
 headless-browser scan against fake local copies of each kind of site. See
 `../../CLAUDE.md` for how it's built.

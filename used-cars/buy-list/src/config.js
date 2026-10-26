@@ -12,7 +12,9 @@ export const DEFAULTS = {
   radiusMiles: 100,
   minDaysListed: 60,          // "listed a long time"
   maxDaysListed: 365,         // older than this is usually a stale/zombie listing
-  minPrice: 4000,
+  minPrice: 10000,            // skip anything cheaper
+  focusMakes: [],             // makes ranked first, e.g. ["Ford"]
+  focusUnderMiles: 0,         // then cars under this many miles (0 = off)
   maxMiles: 175000,
   dailyListSize: 25,          // units on today's call list
   topListSize: 10,            // the "Top 10 today" ranked list at the top of Today

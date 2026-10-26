@@ -72,6 +72,23 @@ test("top 10: the best due cars as one ranked list; ties go to the longest liste
   assert.deepEqual(t.top.slice(0, 3).map((u) => u.vin), [obs(21).vin, obs(20).vin, obs(11).vin]);
 });
 
+test("store priorities: Fords first, then under 80k miles, then score; nothing under the price floor", () => {
+  const db = freshDb();
+  const lot = { name: "Example Motors", phone: "(228) 555-0101", city: "Gulfport", state: "MS", zip: "39501" };
+  applyObservations(db, [
+    obs(0, { dealer: lot, make: "Toyota", model: "Camry", miles: 95000, daysListed: 300, distance: 1, price: 18000 }), // best score, no priority
+    obs(1, { dealer: lot, make: "FORD", model: "Escape", miles: 120000, daysListed: 70, distance: 60, price: 12000 }),  // Ford, high miles
+    obs(2, { dealer: lot, make: "Ford", model: "F-150", miles: 61000, daysListed: 65, distance: 80, price: 26000 }),    // Ford under 80k
+    obs(4, { dealer: lot, make: "Honda", model: "Accord", miles: 79000, daysListed: 90, distance: 40, price: 15000 }),  // under 80k
+    obs(5, { dealer: lot, make: "Ford", model: "Focus", miles: 30000, daysListed: 200, distance: 1, price: 9500 }),     // under $10k
+  ], config);
+  const cfg = { ...config, minPrice: 10000, focusMakes: ["Ford"], focusUnderMiles: 80000 };
+  const t = B.buildCallList(db, { ...cfg, dailyListSize: 10 });
+  assert.deepEqual(t.top.map((u) => u.model), ["F-150", "Escape", "Accord", "Camry"], "Ford <80k, Ford, <80k, rest; the $9,500 Focus is gone");
+  assert.deepEqual(t.top[0].why.slice(0, 2), ["★ Ford", "under 80k mi"]);
+  assert.equal(B.browseListings(db, cfg).rows[0].model, "F-150", "All aged 'Best buys' uses the same order");
+});
+
 test("price drops are per source: a cut counts, two sites disagreeing doesn't", () => {
   const db = freshDb();
   applyObservations(db, [obs(0, { price: 20000 }), obs(0, { source: "dealer", price: 19800 })], config);

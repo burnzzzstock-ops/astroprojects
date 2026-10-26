@@ -1,6 +1,6 @@
 // Ranking the aged cars into today's call list, and recording call outcomes.
 // Pure functions over the db object (the server wraps them with readDb/withDb).
-import { clamp01, money, localDay, csvCell, dealerKeyOf, zipDistance, zipForCity, daysSince } from "./util.js";
+import { clamp01, money, localDay, csvCell, dealerKeyOf, zipDistance, zipForCity, daysSince, norm } from "./util.js";
 import { daysListed, isActive } from "./listings.js";
 
 // Call outcome → the car's status and how many days until it's due again.
@@ -46,13 +46,28 @@ export function scoreListing(l, { days, radius = 100 }) {
   return { score: Math.max(0, Math.round(s)), why };
 }
 
+/**
+ * The store's priorities rank ahead of the score: `focusMakes` first (Ford), then cars
+ * under `focusUnderMiles`. tier 0-3, higher first; each shows as a chip.
+ */
+export function priorityOf(l, cfg) {
+  const make = (cfg.focusMakes || []).find((m) => norm(m) && norm(m) === norm(l.make));
+  const low = cfg.focusUnderMiles > 0 && l.miles != null && l.miles < cfg.focusUnderMiles;
+  const why = [];
+  if (make) why.push(`★ ${make}`);
+  if (low) why.push(`under ${Math.round(cfg.focusUnderMiles / 1000)}k mi`);
+  return { tier: (make ? 2 : 0) + (low ? 1 : 0), why };
+}
+
 function view(l, cfg, now) {
   const days = daysListed(l, now);
+  const s = scoreListing(l, { days, radius: cfg.radiusMiles });
+  const p = priorityOf(l, cfg);
   return {
     ...l, days,
     sources: Object.keys(l.seen || {}).map((k) => ({ key: k, label: SOURCE_LABEL[k] || k, url: l.urls?.[k] || null })),
     stale: !isActive(l, now),
-    ...scoreListing(l, { days, radius: cfg.radiusMiles }),
+    score: s.score, tier: p.tier, why: [...p.why, ...s.why],
   };
 }
 
@@ -77,8 +92,9 @@ function dealerCard(u) {
 
 const RIDE_ALONG_MAX = 6;
 
-// Best first: score, then listed longest, then closest (plenty of cars tie at the top score).
-const byBest = (a, b) => b.score - a.score || b.days - a.days || (a.distance ?? Infinity) - (b.distance ?? Infinity);
+// Best first: the store's priority tier (Ford, then low miles), then score, then listed
+// longest, then closest (plenty of cars tie at the top score).
+const byBest = (a, b) => b.tier - a.tier || b.score - a.score || b.days - a.days || (a.distance ?? Infinity) - (b.distance ?? Infinity);
 
 /**
  * Today's list: the top-N due cars by score, grouped by dealer (best first) so one
@@ -125,12 +141,12 @@ export function browseListings(db, cfg, { q = "", sort = "score", limit = 150 } 
     });
   }
   const by = {
-    score: (a, b) => b.score - a.score,
+    score: byBest,
     days: (a, b) => b.days - a.days,
     drops: (a, b) => b.priceDrops - a.priceDrops || b.priceDropTotal - a.priceDropTotal,
     price: (a, b) => (a.price || Infinity) - (b.price || Infinity),
     distance: (a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity),
-  }[sort] || ((a, b) => b.score - a.score);
+  }[sort] || byBest;
   const scored = rows.map((l) => view(l, cfg, now)).sort(by);
   return { total: scored.length, rows: scored.slice(0, limit) };
 }

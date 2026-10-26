@@ -42,7 +42,7 @@ export function scoreListing(l, { days, radius = 100 }) {
   if (!l.price) { s -= 10; why.push("no price posted"); }
   if (l.miles && l.miles > 150000) s -= 5;
   if (l.dealer?.type === "private" || String(l.dealerKey).startsWith("private:")) why.push("private seller");
-  if (l.dealRating) why.push(`CarGurus: ${RATING(l.dealRating)}`);
+  if (l.dealRating && !/^(na|n\/a|none|unknown)$/i.test(l.dealRating)) why.push(`CarGurus: ${RATING(l.dealRating)}`); // "NA" = no rating
   return { score: Math.max(0, Math.round(s)), why };
 }
 

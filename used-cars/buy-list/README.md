@@ -122,7 +122,7 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 35 tests offline: the extractor against CarGurus, JSON-LD and
+`npm test` runs 36 tests offline: the extractor against CarGurus, JSON-LD and
 dealer-API data shapes; merging and price drops; ranking; call outcomes; and a full
 headless-browser scan against fake local copies of each kind of site. See
 `../../CLAUDE.md` for how it's built.

@@ -27,6 +27,18 @@ export function resolveDealerKey(db, dealer, listingKeyValue) {
   return cands.length === 1 ? cands[0][0] : k;
 }
 
+/**
+ * Every dealers.csv row is a known dealer (name, city, state, phone) whether or not its
+ * own site could be read: a dealer whose site blocks us still gets the other sources'
+ * cars on its card, with the CSV phone when they don't give one.
+ */
+export function registerCsvDealers(db, rows) {
+  db.csvDealers ||= {};
+  for (const d of rows) {
+    if (d.name) db.csvDealers[dealerKeyOf(d, "")] = { name: d.name, city: d.city || null, state: d.state || null, phone: d.phone || null };
+  }
+}
+
 export const listingKey = (o) =>
   o.vin || `${o.source}:${o.sourceId || `${norm(o.title)}|${o.price ?? ""}|${o.miles ?? ""}`}`;
 
@@ -60,7 +72,7 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
   const ordered = [...observations].sort((a, b) => (b.source === "dealer") - (a.source === "dealer"));
   for (const o of ordered) {
     if (o.source === "dealer" && o.dealer?.name) {
-      db.csvDealers[dealerKeyOf(o.dealer, "")] = { name: o.dealer.name, city: o.dealer.city || null, state: o.dealer.state || null };
+      db.csvDealers[dealerKeyOf(o.dealer, "")] = { name: o.dealer.name, city: o.dealer.city || null, state: o.dealer.state || null, phone: o.dealer.phone || null };
     }
   }
   // A car read off a dealer site with no VIN (keyed by its link) and the same car with a
@@ -128,6 +140,9 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
         if (v && (o.source === "dealer" || !l.dealer[k])) l.dealer[k] = v;
       }
     }
+    // On a dealers.csv dealer's card: its CSV phone/city fill in what this source left out.
+    const known = db.csvDealers[l.dealerKey];
+    if (known) for (const k of ["phone", "city", "state"]) if (known[k] && !l.dealer[k]) l.dealer[k] = known[k];
     if (o.price) l.srcPrice[o.source] = o.price;
     if (o.url) l.urls[o.source] = o.url;
     if (o.daysListed != null) l.reported[o.source] = { days: o.daysListed, at };

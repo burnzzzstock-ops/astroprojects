@@ -78,7 +78,10 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
     reading raw HTML flagged normal pages that load reCAPTCHA or a "captcha-field" widget. A
     blocked site saves `dealer-<name>-blocked-*.html/png` to `data/debug`. First full pass (before
     the fixes above): 136 read, 21 read 0 cars, 137 HTTP 403, 12 unreachable, 2×404, 2×503, 2
-    timeouts, 1 link that downloads a file. Platforms that read: DealerOn (`/searchused.aspx`),
+    timeouts, 1 link that downloads a file. First pass with the fixes (the app's catch-up scan):
+    151/308 read, 8,486 dealer-site cars, 137×403. Changing how a source reads prices makes
+    one-time fake "price drops" on the next scan (583 that day, undone in the local data from
+    `buylist.json.bak`), so after such a change, check `dropCount` on the next scan. Platforms that read: DealerOn (`/searchused.aspx`),
     space.auto, Carsforsale.com, DealerCarSearch, AutoCorner (`/docs/vehicle_search.html`), and
     the small-lot `inventory.php` sites. Known leftovers: sites with broken TLS/redirect loops/
     octet-stream pages (Eleven Automotive, Paul's of Picayune, Independent Auto Brokers), inventory
@@ -95,7 +98,10 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   date in `VehicleTaggingInventoryDate`; when `TaggingPrice` is 0 the price is "Selling Price" in its
   base64 `VehiclePriceLibrary`. AutoCorner's `/json/srp_vehicles.json` uses `vehicle_*` names.
 - **Merge** (`src/listings.js`): keyed by VIN (else `source:id`). Dealer cards: `resolveDealerKey`
-  maps other sources' names onto `db.csvDealers` (the dealers.csv names). It merges when one
+  maps other sources' names onto `db.csvDealers` (the dealers.csv names). Every scan registers ALL
+  dealers.csv rows there with their phone (`registerCsvDealers`), not only the ones whose site
+  read, so a blocked dealer's CarGurus cars land on its card and take the CSV phone/city when
+  the source has none (CarGurus often has no phone). It merges when one
   normalized name contains the other (2+ words) and the state matches, with city as the
   tie-breaker; anything ambiguous stays separate. Dealer-source rows are applied first in each scan.
   A VIN-less dealer-site car and a VIN'd car from another source on the same dealer card with the
@@ -107,7 +113,8 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   name fragments, hidden dealers, cars beyond radius+5 mi, and new cars. Cars nobody called that
   are unseen for 45 days get pruned. A car is "active" if any source saw it within 3 days.
 - **Ranking / list / outcomes** (`src/buyList.js`): score = days listed 0-40, drops 0-20, dropped
-  since your last call +10, closeness 0-15, no price −10, 150k+ mi −5, each with a "why" chip.
+  since your last call +10, closeness 0-15, no price −10, 150k+ mi −5, each with a "why" chip
+  (CarGurus' "NA" deal rating gets no chip).
   Today = top `dailyListSize` due cars grouped by dealer (`dealerKeyOf`: normalized name minus
   LLC/Inc; private sellers get one key per car), plus up to 6 per card riding along, with
   negotiating cars pinned. Outcomes: no_answer +1d, left_message +2d, too_high +10d,
@@ -122,7 +129,7 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
 - **Page** (`public/index.html`): dark, phone-first, tap-to-call. Buttons reference cars by index
   (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all
   text is escaped.
-- **Tests:** `npm test` (node --test, 35 tests, offline). `test/scan.test.mjs` runs a real headless
+- **Tests:** `npm test` (node --test, 36 tests, offline). `test/scan.test.mjs` runs a real headless
   browser against an Express server that copies each site shape: CarGurus feed (400 cars,
   oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,
   dealer API + Next, JSON-LD, plain HTML + Load more, "VIN:" label cards, VIN-less

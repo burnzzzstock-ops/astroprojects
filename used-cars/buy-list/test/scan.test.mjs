@@ -141,6 +141,7 @@ test("full scan: all three sources, merged, ranked", async () => {
 
   const db = readDb();
   const L = db.listings;
+  assert.equal(db.csvDealers["broken site auto"]?.phone, "(228) 555-0123", "every dealers.csv row is known, even one that failed");
   // dealer 1: 2 pages × 3 used (the new one skipped), days from the in-stock date, CSV contact info
   const d1 = Object.values(L).filter((l) => l.dealer.name === "Example Imports");
   assert.equal(d1.length, 6);

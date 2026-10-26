@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { config as defaultConfig } from "./config.js";
 import { readDb, withDb } from "./store.js";
-import { applyObservations } from "./listings.js";
+import { applyObservations, registerCsvDealers } from "./listings.js";
 import { launchBrowser } from "./browser.js";
 import { fetchMarketcheck } from "./sources/marketcheck.js";
 import { fetchCarGurus } from "./sources/cargurus.js";
@@ -88,6 +88,7 @@ export async function runScan({
   scan.ok = ran.some((s) => s.ok); // false when every source failed or none is set up yet
   try {
     const tally = withDb((db) => {
+      if (cfg.sources.dealerSites?.enabled) registerCsvDealers(db, readDealers(cfg.sources.dealerSites.file));
       const t = applyObservations(db, obs, cfg);
       const month = scan.startedAt.slice(0, 7);
       const mcCalls = scan.sources.marketcheck?.apiCalls || 0;

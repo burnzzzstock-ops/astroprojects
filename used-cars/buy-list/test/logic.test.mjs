@@ -43,6 +43,17 @@ test("a dealer-site car with no VIN and the same car with a VIN elsewhere are on
   assert.equal(Object.keys(db.listings).length, 2);
 });
 
+test("a dealers.csv dealer whose site can't be read still gets other sources' cars, with its CSV phone", async () => {
+  const { registerCsvDealers } = await import("../src/listings.js");
+  const db = freshDb();
+  registerCsvDealers(db, [{ name: "Example Motors of Gulfport", phone: "(228) 555-0130", city: "Gulfport", state: "MS" }]);
+  applyObservations(db, [obs(0, { dealer: { name: "Example Motors", phone: null, city: "Gulfport", state: "MS", zip: "39501" }, dealRating: "NA" })], config);
+  const l = db.listings[obs(0).vin];
+  assert.equal(l.dealerKey, "example motors of gulfport", "on the dealers.csv card");
+  assert.equal(l.dealer.phone, "(228) 555-0130", "CSV phone when CarGurus has none");
+  assert.ok(!B.scoreListing(l, { days: 120 }).why.some((w) => /CarGurus/.test(w)), "no 'CarGurus: Na' chip");
+});
+
 test("price drops are per source: a cut counts, two sites disagreeing doesn't", () => {
   const db = freshDb();
   applyObservations(db, [obs(0, { price: 20000 }), obs(0, { source: "dealer", price: 19800 })], config);

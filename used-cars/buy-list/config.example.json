@@ -6,6 +6,7 @@
   "minPrice": 4000,
   "maxMiles": 175000,
   "dailyListSize": 25,
+  "topListSize": 10,
   "scanTime": "06:00",
   "scanDays": [1, 2, 3, 4, 5, 6],
   "excludeSellers": ["astro ford", "carmax", "carvana", "vroom", "enterprise car sales", "hertz car sales"],

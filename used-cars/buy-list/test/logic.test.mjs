@@ -59,6 +59,19 @@ test("a dealers.csv dealer whose site can't be read still gets other sources' ca
   assert.ok(!B.scoreListing(l, { days: 120 }).why.some((w) => /CarGurus/.test(w)), "no 'CarGurus: Na' chip");
 });
 
+test("top 10: the best due cars as one ranked list; ties go to the longest listed, then the closest", () => {
+  const db = freshDb();
+  const lot = { name: "Example Motors", phone: "(228) 555-0101", city: "Gulfport", state: "MS", zip: "39501" };
+  applyObservations(db, [
+    ...Array.from({ length: 12 }, (_, i) => obs(i, { dealer: lot, daysListed: 200 + i, distance: 1 })),
+    obs(20, { dealer: lot, daysListed: 300, distance: 2 }), obs(21, { dealer: lot, daysListed: 300, distance: 1 }),
+  ], config);
+  const t = B.buildCallList(db, { ...config, topListSize: 10 });
+  assert.equal(t.top.length, 10);
+  assert.ok(t.top.every((u) => u.score === 55), "all tied at the top score");
+  assert.deepEqual(t.top.slice(0, 3).map((u) => u.vin), [obs(21).vin, obs(20).vin, obs(11).vin]);
+});
+
 test("price drops are per source: a cut counts, two sites disagreeing doesn't", () => {
   const db = freshDb();
   applyObservations(db, [obs(0, { price: 20000 }), obs(0, { source: "dealer", price: 19800 })], config);

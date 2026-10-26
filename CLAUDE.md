@@ -116,7 +116,8 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
 - **Ranking / list / outcomes** (`src/buyList.js`): score = days listed 0-40, drops 0-20, dropped
   since your last call +10, closeness 0-15, no price −10, 150k+ mi −5, each with a "why" chip
   (CarGurus' "NA" deal rating gets no chip).
-  Today = top `dailyListSize` due cars grouped by dealer (`dealerKeyOf`: normalized name minus
+  Due cars rank by score, then days listed, then distance (many tie at the top score). Today's `top` =
+  the best `topListSize` (10) as a plain ranked list. Today = top `dailyListSize` due cars grouped by dealer (`dealerKeyOf`: normalized name minus
   LLC/Inc; private sellers get one key per car), plus up to 6 per card riding along, with
   negotiating cars pinned. Outcomes: no_answer +1d, left_message +2d, too_high +10d,
   not_selling +21d, negotiating, bought, pass, reopen. Due days are local calendar days.
@@ -127,7 +128,9 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   The scheduler ticks every 5 min: on scan days at/after `scanTime`, it runs once per day if no
   scheduled scan ran today (catches up after sleep). `data/scan.lock` (6h stale) prevents
   overlap with `npm run scan`.
-- **Page** (`public/index.html`): dark, phone-first, tap-to-call. Buttons reference cars by index
+- **Page** (`public/index.html`): dark, phone-first, tap-to-call. Today opens with "Top 10 today" (one line per car,
+  the name links to its full entry `#unit-N`). The status card shows one line for failed dealer sites
+  (count + how many are 403s) linking to the Dealers tab, never the whole list. Buttons reference cars by index
   (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all
   text is escaped.
 - **Tests:** `npm test` (node --test, 36 tests, offline). `test/scan.test.mjs` runs a real headless

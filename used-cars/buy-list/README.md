@@ -73,7 +73,7 @@ finishes. If the PC was off or asleep at
 
 Open the **Buy List** shortcut, or go to http://localhost:4400.
 
-- **Today**: who to call, best first. Tap the phone number, then tap what happened.
+- **Today**: who to call, best first. **Top 10 today** at the top is the ten best cars, one line each with the dealer's number; tap a car's name to jump to its full entry. Below that, the calls are grouped by dealer. Tap the phone number, then tap what happened.
   **Notes** and **Offer $** save with the call.
 - **Whole lot: No answer / Left msg** logs it for every car at that dealer at once.
 - **Hide dealer** takes a lot off the list for good. Undo it on the **Hidden** tab.
@@ -98,6 +98,7 @@ firewall: allow it on **private** networks.
 | `minDaysListed` / `maxDaysListed` | 60 / 365 | "Listed a long time" window; past 365 days is usually a dead listing |
 | `minPrice`, `maxMiles` | 4000, 175000 | Skip junk |
 | `dailyListSize` | 25 | Cars on today's list |
+| `topListSize` | 10 | Cars in the "Top 10 today" list |
 | `scanTime`, `scanDays` | "06:00", Mon-Sat | When the morning scan runs (0 = Sunday) |
 | `excludeSellers` | your store + CarMax, Carvana… | Seller-name words to never list |
 | `browser.headless` | true | Set `false` to watch the browser work (helps if a site asks "are you human?") |

@@ -15,6 +15,7 @@ export const DEFAULTS = {
   minPrice: 4000,
   maxMiles: 175000,
   dailyListSize: 25,          // units on today's call list
+  topListSize: 10,            // the "Top 10 today" ranked list at the top of Today
   scanTime: "06:00",          // local PC time
   scanDays: [1, 2, 3, 4, 5, 6], // 0 = Sunday
   // Seller-name fragments to never list: your own store + retail chains that don't wholesale.

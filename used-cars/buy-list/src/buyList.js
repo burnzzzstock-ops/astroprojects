@@ -77,9 +77,13 @@ function dealerCard(u) {
 
 const RIDE_ALONG_MAX = 6;
 
+// Best first: score, then listed longest, then closest (plenty of cars tie at the top score).
+const byBest = (a, b) => b.score - a.score || b.days - a.days || (a.distance ?? Infinity) - (b.distance ?? Infinity);
+
 /**
  * Today's list: the top-N due cars by score, grouped by dealer (best first) so one
  * call covers every aged car on that lot; that dealer's other due cars ride along.
+ * `top` is the best `topListSize` (10) of those as a plain ranked list.
  * Cars being negotiated are pinned separately.
  */
 export function buildCallList(db, cfg, now = Date.now()) {
@@ -89,7 +93,7 @@ export function buildCallList(db, cfg, now = Date.now()) {
     .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && (!l.nextCallDay || l.nextCallDay <= today))
     .filter((l) => eligible(l, cfg, now))
     .map((l) => view(l, cfg, now))
-    .sort((a, b) => b.score - a.score);
+    .sort(byBest);
 
   const picked = due.slice(0, cfg.dailyListSize);
   const byDealer = new Map();
@@ -106,7 +110,7 @@ export function buildCallList(db, cfg, now = Date.now()) {
     .map((l) => view(l, cfg, now));
   const later = Object.values(db.listings)
     .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && l.nextCallDay > today && eligible(l, cfg, now)).length;
-  return { today, dealers: [...byDealer.values()], negotiating, dueTotal: due.length, laterCount: later };
+  return { today, top: due.slice(0, cfg.topListSize ?? 10), dealers: [...byDealer.values()], negotiating, dueTotal: due.length, laterCount: later };
 }
 
 /** Every aged car still for sale (any status), for "find me a Tacoma". */

@@ -36,8 +36,13 @@ finishes. If the PC was off or asleep at
 ## Setup (Windows, one time)
 
 1. Install **Node.js LTS** from https://nodejs.org (accept the defaults).
-2. Get this folder onto the PC: on GitHub, click **Code → Download ZIP**, unzip it,
-   and open `used-cars\buy-list`. Any location works, e.g. `Documents\buy-list`.
+2. Get this folder onto the PC: download
+   https://github.com/burnzzzstock-ops/astroprojects/archive/refs/heads/main.zip (the
+   repo's default branch on GitHub isn't `main`, so **Code → Download ZIP** gets a copy
+   without this folder), unzip it, and open `used-cars\buy-list`. Any location works,
+   e.g. `Documents\buy-list`. Moving it from another PC instead? Copy the folder without
+   `node_modules`; bring `config.json` and `data\buylist.json` along to keep its settings,
+   list and call history.
 3. Double-click **`setup.bat`**. It installs everything (a few minutes the first
    time), makes the Buy List start whenever you log in, puts a **Buy List** shortcut
    on the desktop, and opens the page.

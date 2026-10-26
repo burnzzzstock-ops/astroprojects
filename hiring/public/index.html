@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hiring Line</title>
+<style>
+  :root { --bg:#0d1117; --card:#151b23; --line:#262f3b; --ink:#e6edf3; --mut:#93a1b3; --acc:#2fb8cc; --ok:#3fcf8e; --hot:#f06a6a; --field:#0f141b; --out:#14606d; --in:#202a36; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { display:flex; align-items:baseline; gap:10px; padding:14px 16px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:18px; } header span { color:var(--mut); font-size:13px; }
+  nav { display:flex; border-bottom:1px solid var(--line); }
+  nav button { background:none; border:none; color:var(--mut); font:inherit; font-weight:600; padding:11px 16px; cursor:pointer; border-bottom:2px solid transparent; }
+  nav button.on { color:var(--ink); border-bottom-color:var(--acc); }
+  main { max-width:860px; margin:0 auto; padding:14px 16px 40px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px; }
+  .row { display:flex; justify-content:space-between; gap:8px; align-items:baseline; flex-wrap:wrap; }
+  .mut { color:var(--mut); font-size:13px; }
+  .pill { font-size:11.5px; padding:2px 9px; border-radius:99px; border:1px solid var(--line); color:var(--mut); white-space:nowrap; }
+  .pill.hot { color:var(--hot); border-color:var(--hot); }
+  input, textarea { width:100%; background:var(--field); color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:10px; font:inherit; }
+  label { display:block; margin:8px 0 4px; }
+  button.btn { background:var(--acc); color:#06222a; font:inherit; font-weight:700; border:none; border-radius:10px; padding:10px 14px; cursor:pointer; min-height:42px; }
+  button.btn.ghost { background:none; color:var(--ink); font-weight:500; border:1px solid var(--line); }
+  button.btn.small { min-height:0; padding:6px 10px; font-size:13px; }
+  button.btn:disabled { opacity:.5; }
+  .msg { max-width:82%; padding:8px 12px; border-radius:14px; margin:4px 0; white-space:pre-wrap; }
+  .msg.in { background:var(--in); }
+  .msg.out { background:var(--out); margin-left:auto; }
+  .funnel { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .funnel div { flex:1; min-width:96px; border:1px solid var(--line); border-radius:10px; padding:8px; text-align:center; }
+  .funnel b { display:block; font-size:22px; }
+  .flex { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .hidden { display:none !important; }
+  #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#26313f; color:var(--ink); padding:10px 16px; border-radius:10px; opacity:0; transition:opacity .2s; pointer-events:none; max-width:90vw; }
+  code { color:var(--acc); }
+</style>
+</head>
+<body>
+<header><h1>Hiring Line</h1><span id="sub">loading...</span></header>
+<nav>
+  <button data-view="list" class="on">Applicants</button>
+  <button data-view="setup">Setup</button>
+</nav>
+<main>
+  <section id="view-list"></section>
+  <section id="view-setup" class="hidden"></section>
+  <section id="view-applicant" class="hidden"></section>
+</main>
+<div id="toast"></div>
+
+<script>
+const qs = new URLSearchParams(location.search);
+let TOKEN = qs.get("token") || localStorage.getItem("hiring_token") || "";
+if (qs.get("token")) { localStorage.setItem("hiring_token", TOKEN); history.replaceState(null, "", location.pathname); }
+let STATUS = null;
+let current = null;
+let pollTimer = null;
+
+async function api(path, opts = {}) {
+  if (!TOKEN) { TOKEN = (prompt("Admin token (Railway → Variables → ADMIN_TOKEN):") || "").trim(); localStorage.setItem("hiring_token", TOKEN); }
+  const r = await fetch("/api" + path, { ...opts, headers: { "Content-Type": "application/json", "x-admin-token": TOKEN } });
+  if (r.status === 401 && !opts._retried) {
+    localStorage.removeItem("hiring_token"); TOKEN = "";
+    return api(path, { ...opts, _retried: true });
+  }
+  if (!r.ok) { const e = await r.json().catch(() => ({ error: r.status })); throw new Error(e.error || r.status); }
+  return r.json();
+}
+function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.style.opacity = 1; setTimeout(() => el.style.opacity = 0, 2400); }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function fmtPhone(p) { const d = String(p || "").replace(/\D/g, "").slice(-10); return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : (p || ""); }
+const TZ = () => STATUS?.timezone || "America/Chicago";
+function when(v) {
+  if (!v) return "";
+  const d = new Date(String(v).includes("T") ? v : String(v).replace(" ", "T") + "Z");
+  return isNaN(d) ? String(v) : d.toLocaleString("en-US", { timeZone: TZ(), month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+const nowLocal = () => new Date().toLocaleString("sv-SE", { timeZone: TZ() }).slice(0, 16);
+
+const LABEL = { new: "new", link_sent: "link sent", applied: "applied", invited: "invited", interview_set: "interview set", interviewed: "interviewed", no_show: "no-show", hired: "hired", passed: "passed", withdrawn: "withdrew" };
+const CLOSED = ["interviewed", "no_show", "hired", "passed", "withdrawn"];
+
+function show(view) {
+  for (const v of ["list", "setup", "applicant"]) document.getElementById("view-" + v).classList.toggle("hidden", v !== view);
+  for (const b of document.querySelectorAll("nav button")) b.classList.toggle("on", b.dataset.view === view);
+  if (view !== "applicant") stopPoll();
+}
+for (const b of document.querySelectorAll("nav button")) b.onclick = () => { show(b.dataset.view); b.dataset.view === "list" ? loadList() : renderSetup(); };
+
+async function loadStatus() {
+  STATUS = await api("/status");
+  const num = STATUS.number ? fmtPhone(STATUS.number) : "no number set";
+  document.getElementById("sub").textContent = `${STATUS.company} · ${STATUS.assistant} · ${num}${STATUS.textingLive ? "" : " · texts are NOT sending (Twilio not configured)"}`;
+}
+
+function card(a, dim) {
+  const d = document.createElement("div");
+  d.className = "card"; d.style.cursor = "pointer";
+  if (dim) d.style.opacity = ".62";
+  d.innerHTML = `<div class="row"><strong>#${a.id} ${esc(a.name || fmtPhone(a.phone))}</strong>
+    <span>${a.opted_out_at ? '<span class="pill hot">opted out</span> ' : ""}<span class="pill">${esc(LABEL[a.status] || a.status)}${a.ai_paused ? " · paused" : ""}</span></span></div>
+    <div class="mut">${esc(a.role || "")} · ${a.source === "manual" ? "added by you" : "texted in"}${a.interview_at ? " · interview " + esc(a.interview_text || a.interview_at) + (a.interview_confirmed ? " (confirmed)" : "") : ""}</div>
+    <div class="mut" style="margin-top:4px;">${esc((a.last_message || "").slice(0, 120))}</div>
+    <div class="mut" style="margin-top:4px;">in: ${when(a.created_at)}${a.last_inbound_at ? " · last heard: " + when(a.last_inbound_at) : ""}</div>`;
+  d.onclick = () => openApplicant(a.id);
+  return d;
+}
+
+async function loadList() {
+  const el = document.getElementById("view-list");
+  let list;
+  try { await loadStatus(); list = await api("/applicants"); } catch (e) { toast(e.message); return; }
+  const now = nowLocal();
+  const past = a => a.interview_at && String(a.interview_at).slice(0, 16) <= now;
+  const groups = [
+    ["Interview time passed", "record how it went", list.filter(a => a.status === "interview_set" && past(a))],
+    ["Applied, ready for review", "check their IdealTraits results, then Invite", list.filter(a => a.status === "applied")],
+    ["Upcoming interviews", "", list.filter(a => a.status === "interview_set" && !past(a)).sort((x, y) => String(x.interview_at).localeCompare(String(y.interview_at)))],
+    ["In progress", `${esc(STATUS.assistant)} is working these`, list.filter(a => ["new", "link_sent", "invited"].includes(a.status))],
+    ["Closed", "", list.filter(a => CLOSED.includes(a.status))],
+  ];
+  const funnel = [
+    ["Applicants", list.length],
+    ["Applied", list.filter(a => a.applied_at).length],
+    ["Invited", list.filter(a => a.invited_at).length],
+    ["Interview booked", list.filter(a => a.interview_set_at).length],
+    ["Hired", list.filter(a => a.status === "hired").length],
+  ];
+  const num = STATUS.number ? fmtPhone(STATUS.number) : "your hiring number";
+  el.innerHTML = `
+    <div class="card">
+      <div class="row"><strong>Pipeline</strong><span class="mut">Put this in every job ad: <b>Text JOBS to ${esc(num)}</b></span></div>
+      <div class="funnel">${funnel.map(([k, v]) => `<div><b>${v}</b><span class="mut">${k}</span></div>`).join("")}</div>
+      ${STATUS.settings.applyUrl ? "" : `<p class="mut" style="color:var(--hot);">No application link yet. Add it under Setup, or ${esc(STATUS.assistant)} has nothing to send.</p>`}
+    </div>
+    <div class="card">
+      <strong>Add an applicant</strong>
+      <p class="mut">For someone who applied on IdealTraits, Indeed, or in person. Add them, check their results, then Invite and ${esc(STATUS.assistant)} texts them two interview times.</p>
+      <div class="flex">
+        <input id="add-name" placeholder="Name" style="flex:1; min-width:140px;">
+        <input id="add-phone" placeholder="Mobile number" inputmode="tel" style="flex:1; min-width:140px;">
+      </div>
+      <label class="mut flex" style="gap:8px;"><input type="checkbox" id="add-ok" style="width:auto;"> This person applied and gave us this number</label>
+      <div class="flex">
+        <button class="btn ghost" onclick="addApplicant(this, false)">Add</button>
+        <button class="btn" onclick="addApplicant(this, true)">Add + invite to interview</button>
+      </div>
+    </div>
+    <div id="groups"></div>`;
+  const g = document.getElementById("groups");
+  for (const [title, hint, items] of groups) {
+    if (!items.length) continue;
+    const h = document.createElement("p");
+    h.className = "mut"; h.style.margin = "16px 0 6px";
+    h.innerHTML = `<b>${title}</b>${hint ? " · " + hint : ""}`;
+    g.appendChild(h);
+    for (const a of items) g.appendChild(card(a, title === "Closed"));
+  }
+  if (!list.length) g.innerHTML = `<p class="mut">No applicants yet. Add "Text JOBS to ${esc(num)}" to your job post, or add someone above.</p>`;
+}
+
+async function addApplicant(btn, invite) {
+  const body = {
+    name: document.getElementById("add-name").value.trim(),
+    phone: document.getElementById("add-phone").value.trim(),
+    attested: document.getElementById("add-ok").checked,
+  };
+  btn.disabled = true;
+  try {
+    const r = await api("/applicants", { method: "POST", body: JSON.stringify(body) });
+    if (invite) {
+      const inv = await api(`/applicants/${r.applicant.id}/invite`, { method: "POST" });
+      toast(inv.sent ? "Added, and the invite was texted" : (inv.note || "Added, invite queued"));
+    } else toast("Applicant added");
+    loadList();
+  } catch (e) { toast(e.message); }
+  btn.disabled = false;
+}
+
+async function renderSetup() {
+  try { await loadStatus(); } catch (e) { toast(e.message); return; }
+  const s = STATUS.settings;
+  document.getElementById("view-setup").innerHTML = `
+    <div class="card">
+      <strong>Job setup</strong>
+      <p class="mut">${esc(STATUS.assistant)} sends the application link to everyone who texts in, answers questions using only the job facts below, and books interviews after you tap Invite.</p>
+      <label class="mut">Application link (your IdealTraits job link)</label>
+      <input id="s-url" value="${esc(s.applyUrl || "")}" placeholder="https://...">
+      <div class="flex" style="margin-top:4px;">
+        <div style="flex:1; min-width:160px;"><label class="mut">Role</label><input id="s-role" value="${esc(s.role || "")}"></div>
+        <div style="flex:1; min-width:160px;"><label class="mut">Interviewer</label><input id="s-int" value="${esc(s.interviewer || "")}"></div>
+      </div>
+      <label class="mut">Interview hours</label>
+      <input id="s-hours" value="${esc(s.interviewHours || "")}" placeholder="Monday-Friday, 9 AM to 5 PM">
+      <label class="mut">Job facts ${esc(STATUS.assistant)} may share (pay plan, schedule, training, benefits, what to bring). Anything not written here, it says the manager will cover in the interview.</label>
+      <textarea id="s-facts" rows="7" placeholder="Pay: commission plus volume bonuses, first-year average ...&#10;Training: paid, first 90 days&#10;Schedule: 5 days a week, Saturdays rotate&#10;Benefits: health, dental, 401k&#10;Experience: not required&#10;Interview: about 30 minutes, bring a driver's license">${esc(s.jobFacts || "")}</textarea>
+      <button class="btn" style="margin-top:10px;" onclick="saveSetup(this)">Save job setup</button>
+    </div>
+    <div class="card mut">
+      Twilio webhooks for the hiring number: messaging <code>POST ${esc(location.origin)}/webhooks/twilio/sms</code>, voice <code>POST ${esc(location.origin)}/webhooks/twilio/voice</code>.
+      Program page for the A2P registration: <a href="/" target="_blank" style="color:var(--acc);">${esc(location.origin)}/</a>
+    </div>`;
+}
+
+async function saveSetup(btn) {
+  btn.disabled = true;
+  const body = {
+    applyUrl: document.getElementById("s-url").value.trim(),
+    role: document.getElementById("s-role").value.trim(),
+    interviewer: document.getElementById("s-int").value.trim(),
+    interviewHours: document.getElementById("s-hours").value.trim(),
+    jobFacts: document.getElementById("s-facts").value,
+  };
+  await api("/settings", { method: "POST", body: JSON.stringify(body) }).then(() => toast("Saved")).catch(e => toast(e.message));
+  btn.disabled = false;
+}
+
+function renderThread(messages) {
+  const t = document.getElementById("thread");
+  if (!t) return;
+  const nearBottom = (t.scrollHeight - t.scrollTop - t.clientHeight) < 80;
+  t.innerHTML = messages.map(m =>
+    `<div class="msg ${m.direction}">${esc(m.body)}<div class="mut" style="font-size:11px;">${when(m.created_at)}${m.meta ? " · " + esc(m.meta) : ""}</div></div>`
+  ).join("") || '<p class="mut">No messages yet.</p>';
+  if (nearBottom) t.scrollTop = t.scrollHeight;
+}
+
+async function openApplicant(id) {
+  let r;
+  try { r = await api(`/applicants/${id}`); } catch (e) { toast(e.message); return; }
+  const a = r.applicant;
+  current = a;
+  show("applicant");
+  const canInvite = ["new", "link_sent", "applied", "no_show", "interviewed"].includes(a.status);
+  const outcome = (st, label) => `<button class="btn ghost small" style="${a.status === st ? "border-color:var(--acc); color:var(--acc);" : ""}" onclick="setStatus('${st}')">${label}</button>`;
+  const assistant = esc(STATUS?.assistant || "the assistant");
+  document.getElementById("view-applicant").innerHTML = `
+    <button class="btn ghost small" onclick="show('list'); loadList()">← Back</button>
+    <div class="card" style="margin-top:10px;">
+      <div class="row"><strong>#${a.id} ${esc(a.name || fmtPhone(a.phone))}</strong>
+        <span><span class="pill" style="background:${a.ai_paused ? "var(--hot)" : "var(--ok)"}; color:#08121a; border:none; font-weight:700;">${a.ai_paused ? "AI OFF" : "AI ON"}</span>
+        ${a.opted_out_at ? '<span class="pill hot">opted out</span>' : ""}
+        <span class="pill">${esc(LABEL[a.status] || a.status)}</span></span></div>
+      <div class="mut">${esc(fmtPhone(a.phone))} · ${esc(a.role || "")} · ${a.source === "manual" ? "added by you" : "texted in"} · since ${when(a.created_at)}</div>
+      <div class="mut" style="margin-top:4px;">${a.applied_at ? "applied " + when(a.applied_at) : (a.link_sent_at ? "link sent " + when(a.link_sent_at) : "link not sent yet")}${a.nudge_count ? ` · ${a.nudge_count} reminder(s)` : ""}${a.invited_at ? " · invited " + when(a.invited_at) + (a.invite_sent_at ? "" : " (queued)") : ""}</div>
+      ${a.interview_at ? `<div style="margin-top:6px;">Interview: <b>${esc(a.interview_text || a.interview_at)}</b>${a.interview_confirmed ? " · confirmed" : a.interview_reminded_at ? " · reminder sent" : ""}</div>` : ""}
+      <div class="flex" style="margin-top:10px;">
+        ${canInvite ? `<button class="btn" onclick="invite(this)">Invite to interview</button>` : ""}
+        ${["new", "link_sent"].includes(a.status) ? `<button class="btn ghost" onclick="setStatus('applied')">Mark applied</button>` : ""}
+        <button class="btn ghost" onclick="togglePause()">${a.ai_paused ? `Resume ${assistant}` : `Pause ${assistant}`}</button>
+      </div>
+      <div class="flex" style="margin-top:10px;">
+        <input type="datetime-local" id="when" style="flex:1; min-width:190px;" value="${a.interview_at ? esc(String(a.interview_at).replace(" ", "T").slice(0, 16)) : ""}">
+        <button class="btn ghost" onclick="setInterview(this)">Set interview time</button>
+      </div>
+      <p class="mut" style="margin:12px 0 6px;">How did it go?</p>
+      <div class="flex">
+        ${outcome("interviewed", "Interviewed")}${outcome("no_show", "No-show")}${outcome("hired", "Hired")}${outcome("passed", "Passed")}${outcome("withdrawn", "Withdrew")}
+        <button class="btn ghost small" style="color:var(--hot); border-color:var(--hot);" onclick="removeApplicant(false)">Delete</button>
+        <button class="btn ghost small" style="color:var(--hot); border-color:var(--hot);" onclick="removeApplicant(true)">Block</button>
+      </div>
+    </div>
+    <div class="card"><strong class="mut" style="font-size:12px;">CONVERSATION</strong><div id="thread" style="max-height:50vh; overflow-y:auto;"></div></div>
+    <div class="card">
+      <textarea id="manual" rows="2" placeholder="Text them as yourself..."></textarea>
+      <button class="btn" style="margin-top:8px;" onclick="sendManual(this)">Send as me</button>
+      <p class="mut" style="margin:6px 0 0;">${assistant} stays quiet for a few minutes after you text, so you two don't talk over each other.</p>
+    </div>
+    <div class="card">
+      <strong>Your notes</strong>
+      <p class="mut" style="margin:6px 0;">Logistics only (for example "prefers mornings", "ask for Mike at the front desk"). ${assistant} treats these as true. Never put scores or personal details here.</p>
+      <textarea id="notes">${esc(a.notes || "")}</textarea>
+      <button class="btn ghost small" style="margin-top:6px;" onclick="saveNotes()">Save notes</button>
+    </div>`;
+  renderThread(r.messages);
+  const t = document.getElementById("thread"); t.scrollTop = t.scrollHeight;
+  stopPoll();
+  pollTimer = setInterval(async () => {
+    if (document.hidden || !current) return;
+    const fresh = await api(`/applicants/${current.id}`).catch(() => null);
+    if (fresh) renderThread(fresh.messages);
+  }, 8000);
+}
+function stopPoll() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+const post = (path, body) => api(`/applicants/${current.id}${path}`, { method: "POST", body: JSON.stringify(body || {}) });
+
+async function invite(btn) {
+  btn.disabled = true; btn.textContent = "Texting...";
+  await post("/invite").then(r => toast(r.sent ? "Invite texted with two interview times" : (r.note || "Invite queued"))).catch(e => toast(e.message));
+  openApplicant(current.id);
+}
+async function setStatus(status) {
+  await post("/status", { status }).then(() => toast("Updated")).catch(e => toast(e.message));
+  openApplicant(current.id);
+}
+async function setInterview(btn) {
+  const v = document.getElementById("when").value;
+  if (!v) return toast("Pick a date and time first");
+  btn.disabled = true;
+  await post("/interview", { scheduled_at: v }).then(() => toast("Interview time saved")).catch(e => toast(e.message));
+  openApplicant(current.id);
+}
+async function togglePause() {
+  await post(current.ai_paused ? "/resume" : "/pause").catch(e => toast(e.message));
+  openApplicant(current.id);
+}
+async function sendManual(btn) {
+  const box = document.getElementById("manual");
+  const body = box.value.trim();
+  if (!body) return;
+  btn.disabled = true;
+  await post("/send", { body }).then(() => { box.value = ""; toast("Sent"); }).catch(e => toast(e.message));
+  openApplicant(current.id);
+}
+async function saveNotes() {
+  await post("/notes", { notes: document.getElementById("notes").value }).then(() => toast("Notes saved")).catch(e => toast(e.message));
+}
+async function removeApplicant(block) {
+  const q = block ? `Block this number and delete applicant #${current.id}? Their texts will be ignored from now on.` : `Delete applicant #${current.id} and their texts? This can't be undone.`;
+  if (!confirm(q)) return;
+  const call = block ? post("/block") : api(`/applicants/${current.id}`, { method: "DELETE" });
+  await call.then(() => { toast(block ? "Blocked" : "Deleted"); show("list"); loadList(); }).catch(e => toast(e.message));
+}
+
+loadList();
+</script>
+</body>
+</html>

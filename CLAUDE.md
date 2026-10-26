@@ -131,7 +131,7 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   The scheduler ticks every 5 min: on scan days at/after `scanTime`, it runs once per day if no
   scheduled scan ran today (catches up after sleep). `data/scan.lock` (6h stale) prevents
   overlap with `npm run scan`.
-- **Page** (`public/index.html`): dark, phone-first, tap-to-call. Today opens with "Top 10 today" (one line per car,
+- **Page** (`public/index.html`): dark, phone-first, tap-to-call. Today opens with "Top 10 today" (one line per car with VIN/stock,
   the name links to its full entry `#unit-N`). The status card shows one line for failed dealer sites
   (count + how many are 403s) linking to the Dealers tab, never the whole list. Buttons reference cars by index
   (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all

@@ -58,6 +58,7 @@
   .top-title { font-weight:650; color:var(--ink); text-decoration:none; }
   .top-title:hover { text-decoration:underline; }
   ol.top .chips { margin:4px 0 0; }
+  .vin { font-family:ui-monospace, Consolas, "Cascadia Mono", monospace; color:var(--ink); letter-spacing:.5px; user-select:all; }
   ol.top a.call { font-size:13.5px; padding:7px 11px; }
   .unit.flush { border-top:none; margin-top:0; padding-top:0; }
   .unit-top { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
@@ -337,6 +338,7 @@ function topRow(u, rank) {
     <div style="min-width:0;">
       ${i >= 0 ? `<a class="top-title" href="#unit-${i}">${esc(carTitle(u))}</a>` : `<span class="top-title">${esc(carTitle(u))}</span>`}
       <div class="mut"><b style="color:var(--ink);">${money(u.price)}</b> · ${num(u.miles)} mi · <b style="color:var(--ink);">${u.days}</b> days · ${esc(dealer)}${u.distance != null ? ` · ${Math.round(u.distance)} mi` : ""}</div>
+      ${u.vin ? `<div class="mut">VIN <span class="vin">${esc(u.vin)}</span>${u.stock ? ` · Stk ${esc(u.stock)}` : ""}</div>` : ""}
       ${chips ? `<div class="chips">${chips}</div>` : ""}
     </div>
     ${tel ? `<a class="call" href="${tel}">📞 ${esc(u.dealer.phone)}</a>` : "<span></span>"}

@@ -34,6 +34,18 @@ test("buckets: body, drivetrain, fuel, engine, colors, features, from the site's
     ["Leather seats", "Sunroof / moonroof", "Bluetooth", "CarPlay / Android Auto"]);
 });
 
+test("live Marketcheck shape (2026-10): build details land in the same filter buckets", async () => {
+  const { normalizeMarketcheck } = await import("../src/sources/marketcheck.js");
+  const l = normalizeMarketcheck({ id: "mc9", vin: "1FTEX1EP5JF000016", heading: "2025 Kia K4 LXS", price: 23095, miles: 46371, dom: 170, dom_active: 5,
+    exterior_color: "Snow White Pearl", base_ext_color: "White", interior_color: "Gray", seller_type: "dealer",
+    build: { year: 2025, make: "Kia", model: "K4", trim: "LXS", body_type: "Sedan", transmission: "Automatic", drivetrain: "FWD", fuel_type: "Unleaded", engine: "2.0L I4", cylinders: 4 },
+    dealer: { name: "Example Motors", city: "Gulfport", state: "MS", zip: "39501", phone: "(228) 555-0140", dealer_type: "franchise" }, dist: 0.1 });
+  assert.equal(l.daysListed, 170, "total days on market, not just the current listing");
+  assert.deepEqual([F.bodyOf(l), F.driveOf(l), F.fuelOf(l), F.transOf(l), F.engineOf(l), F.colorOf(l), F.intColorOf(l)],
+    ["Sedan", "FWD", "Gas", "Automatic", "4 cylinders", "White", "Gray"]);
+  assert.equal(l.dealer.type, "franchise");
+});
+
 test("cleanFilter keeps known categories with sane values only", () => {
   assert.deepEqual(F.cleanFilter({ make: ["Ford", "", "Ford", "Toyota"], nope: ["x"], price: ["10000", ""], cpo: "true", hasPrice: false, q: "  lariat " }),
     { make: ["Ford", "Toyota"], price: [10000, null], cpo: true, q: "lariat" });

@@ -15,7 +15,10 @@ no paid services, no hosting, no logins.
     counts from the first day it sees each car (and uses an in-stock date when a
     site publishes one).
   - **Marketcheck free tier** (optional): $0, no credit card, ~500 lookups a month.
-    It's skipped unless you add a free key.
+    It's skipped unless you add a free key (`sources.marketcheck.apiKey` in config.json). Each
+    scan reads the 500 nearest aged cars (the free tier's limit) and catches cars a dealer
+    re-listed to reset CarGurus' day count. Use the key on one PC only: each copy counts its own
+    lookups against the same monthly limit.
 - **One record per car.** The same VIN on several sources is merged, and "days
   listed" is the longest any source reports.
 - **Fords first, then cars under 80,000 miles,** then everything else; nothing under $10,000.
@@ -139,7 +142,7 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 45 tests offline: the extractor against CarGurus, JSON-LD and
+`npm test` runs 47 tests offline: the extractor against CarGurus, JSON-LD and
 dealer-API data shapes; merging and price drops; ranking; call outcomes; and a full
 headless-browser scan against fake local copies of each kind of site. See
 `../../CLAUDE.md` for how it's built.

@@ -195,6 +195,10 @@ export function recordOutcome(db, keys, outcome, { notes = null, offer = null } 
   return { updated };
 }
 
+// Each source's result from the most recent scan that ran it, so a one-source scan
+// ("Scan now", `npm run scan -- --only marketcheck`) doesn't hide the others' last result.
+const lastRun = (db, k) => db.scans.find((s) => s.sources?.[k])?.sources[k] || null;
+
 export function status(db, cfg, now = Date.now()) {
   const aged = Object.values(db.listings).filter((l) => !db.hiddenDealers[l.dealerKey] && eligible(l, cfg, now));
   const open = aged.filter((l) => !["bought", "passed"].includes(l.status));
@@ -207,7 +211,9 @@ export function status(db, cfg, now = Date.now()) {
       minPrice: cfg.minPrice, maxMiles: cfg.maxMiles, dailyListSize: cfg.dailyListSize, scanTime: cfg.scanTime,
     },
     sourcesEnabled: Object.fromEntries(Object.entries(cfg.sources).map(([k, v]) => [k, !!v.enabled])),
-    lastScan: db.scans[0] || null,
+    lastScan: db.scans[0]
+      ? { ...db.scans[0], sources: Object.fromEntries(Object.keys(cfg.sources).map((k) => [k, lastRun(db, k)]).filter(([, r]) => r)) }
+      : null,
     marketcheck: { used: db.marketcheckCalls[month] || 0, cap: cfg.sources.marketcheck.monthlyCallCap, hasKey: !!cfg.sources.marketcheck.apiKey },
     stats: {
       tracked: open.length,
@@ -225,7 +231,8 @@ export function status(db, cfg, now = Date.now()) {
  * the site in the last few days, and the error if the last scan couldn't read it.
  */
 export function dealerRoster(db, cfg, dealers, now = Date.now()) {
-  const failed = new Map((db.scans[0]?.sources?.dealerSites?.failed || []).map((f) => [f.name, f.error]));
+  const last = lastRun(db, "dealerSites");
+  const failed = new Map((last?.failed || []).map((f) => [f.name, f.error]));
   const byKey = new Map();
   for (const l of Object.values(db.listings)) {
     const r = byKey.get(l.dealerKey) || { aged: 0, seen: 0 };
@@ -233,7 +240,7 @@ export function dealerRoster(db, cfg, dealers, now = Date.now()) {
     if (l.seen?.dealer && (daysSince(l.seen.dealer, now) ?? Infinity) <= 3) r.seen++;
     byKey.set(l.dealerKey, r);
   }
-  const scanned = !!db.scans[0]?.sources?.dealerSites && !db.scans[0].sources.dealerSites.skipped;
+  const scanned = !!last && !last.skipped;
   return dealers.map((d) => {
     const r = byKey.get(dealerKeyOf({ name: d.name }, "")) || { aged: 0, seen: 0 };
     return {

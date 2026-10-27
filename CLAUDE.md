@@ -100,6 +100,16 @@ The used car manager's daily call sheet: used cars for sale within 200 mi of 395
     Solutions, Captain Ron's).
   - `marketcheck.js`: v2 `/search/car/active`, FREE tier only (key optional). `dom_range`
     filter, 50 rows per call, `start` = offset. Monthly cap tracked in `db.marketcheckCalls[YYYY-MM]`.
+    The key lives in the gitignored `config.json` only (the operator pastes it; never commit it).
+    **Live 2026-10-26:** radius is capped at 100 mi in code (free tier); the API pages through the
+    first 500 results of a search only (`start=500` → HTTP 422), so a scan is 10 calls = the 500
+    nearest aged cars, which that day were all within ~1 mi of 39540 (the D'Iberville dealer row) out
+    of 14,537 in 100 mi. Its `dom` is the car's whole time on the dealer's site, while CarGurus resets
+    its count when a dealer re-uploads a listing: 50 of 199 cars on both were under 60 days on
+    CarGurus and 60-326 on Marketcheck, and the merge takes the longest, so they surface. Build details
+    (`body_type`, `drivetrain`, `fuel_type`, `transmission`, `engine`, `base_ext_color`…) feed the filters.
+    The status chips and the Dealers tab show each source's most recent run (`lastRun`), so a
+    one-source scan doesn't blank the others.
 - **Generic extractor** (`src/extract.js`): walks any JSON for listing-like objects (valid VIN with
   no I/O/Q, or price + year + name + miles) and reads each field from an alias list (daysOnMarket,
   inStockDate, serviceProviderName, phoneNumberString, JSON-LD offers/seller/address…). One
@@ -160,7 +170,7 @@ The used car manager's daily call sheet: used cars for sale within 200 mi of 395
   (count + how many are 403s) linking to the Dealers tab, never the whole list. Buttons reference cars by index
   (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all
   text is escaped.
-- **Tests:** `npm test` (node --test, 45 tests, offline). `test/filters.test.mjs`: buckets, matching,
+- **Tests:** `npm test` (node --test, 47 tests, offline). `test/filters.test.mjs`: buckets, matching,
   counts, and the call list following a filter. `test/scan.test.mjs` runs a real headless
   browser against an Express server that copies each site shape: CarGurus feed (400 cars,
   oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,

@@ -89,6 +89,22 @@ test("store priorities: Fords first, then under 80k miles, then score; nothing u
   assert.equal(B.browseListings(db, cfg).rows[0].model, "F-150", "All aged 'Best buys' uses the same order");
 });
 
+test("a one-source scan doesn't hide the other sources' last result (status chips, Dealers tab)", () => {
+  const db = freshDb();
+  db.scans = [
+    { startedAt: "2026-10-27T03:00:00Z", trigger: "manual", sources: { marketcheck: { ok: true, found: 12 } } },
+    { startedAt: "2026-10-27T01:00:00Z", trigger: "manual", sources: {
+      cargurus: { ok: true, found: 100 }, dealerSites: { ok: true, found: 50, failed: [{ name: "Broken Site Auto", error: "site blocked or unavailable (HTTP 403)" }] },
+    } },
+  ];
+  const s = B.status(db, config);
+  assert.equal(s.lastScan.startedAt, "2026-10-27T03:00:00Z");
+  assert.deepEqual(Object.keys(s.lastScan.sources).sort(), ["cargurus", "dealerSites", "marketcheck"]);
+  assert.equal(s.lastScan.sources.cargurus.found, 100);
+  const [row] = B.dealerRoster(db, config, [{ name: "Broken Site Auto", url: "https://example.com/" }]);
+  assert.equal(row.error, "site blocked or unavailable (HTTP 403)");
+});
+
 test("price drops are per source: a cut counts, two sites disagreeing doesn't", () => {
   const db = freshDb();
   applyObservations(db, [obs(0, { price: 20000 }), obs(0, { source: "dealer", price: 19800 })], config);

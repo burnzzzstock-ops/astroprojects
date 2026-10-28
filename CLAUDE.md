@@ -160,7 +160,19 @@ the config template, adds a Startup shortcut to `start.bat` (restart loop) and a
   one). The details are stored per car by `listings.js` (`DETAIL_FIELDS`) from any source. API:
   `?f=<json>` on `/api/today`, `/api/today.csv`, `/api/listings`; `GET /api/filters` (defs + counts);
   `GET/PUT /api/prefs` (`{active, saved:[{name, filter}]}`). No filter = "Astro default".
-- **Pure modules** (bundle for the browser, no Node imports): `src/buyList.js`, `src/filters.js`,
+- **Forgiving search** (`src/search.js`, 2026-10-28): "Search all cars" (`browseListings` q) and the
+  filter's search box (`f.q`, via `withSearch` in filters.js) match every word against each car's
+  year/make/model/trim/title/dealer/city/VIN/stock with punctuation squashed out ("f150" = "F-150";
+  "f 150", "cr v", "4 wd" are joined: a 1-2 letter piece + a word starting with a digit or as short).
+  A word that matches NO car on the aged list is swapped (`resolveQuery`, against the whole aged pool
+  so every view agrees) for the closest vocabulary words: nicknames first (chevy, vw, caddy, bimmer,
+  benz), else fewest typos (optimal string alignment, swapped letters = 1; allowed 1/2/3 by length
+  ≤4/≤7/8+; also against the start of a longer word, so a half-typed "silvr" finds Silverado), ties
+  kept, most common first, max 5. Pure numbers and words under 3 letters are never guessed at; an
+  exact word never pulls in look-alikes (camry ≠ Camaro). `fixes: [{from, to}]` come back on
+  `browseListings` (its own q) and `filterSummary` (the filter's q); the page shows "Did you mean
+  **Tacoma**?" (`showFixes` → `#allFix` / `#fFix`) or "Nothing on the list is close to …".
+- **Pure modules** (bundle for the browser, no Node imports): `src/buyList.js`, `src/filters.js`, `src/search.js`,
   `src/age.js` (`daysListed`, `isActive`, `ACTIVE_DAYS`), `src/util.js` (`localDay(offset, now,
   timeZone)`: cloud code passes "America/Chicago" since Cloudflare/GitHub run on UTC). Node-only:
   `src/geo.js` (`zipDistance`, `zipForCity` via `zipcodes`), `src/roster.js`, `src/publish.js`.
@@ -225,8 +237,9 @@ the config template, adds a Startup shortcut to `start.bat` (restart loop) and a
   - Local try-out: `node cloud/build.mjs`, `cloud/.dev.vars` with ACCESS_PIN, `npx wrangler dev
     --local` in cloud/ (gitignored: cloud/public, .wrangler, .dev.vars, .scan-data). Restart
     `wrangler dev` after a rebuild if the page starts answering 500 (it loses the rebuilt folder).
-- **Tests:** `npm test` (node --test, 55 tests, offline). `test/filters.test.mjs`: buckets, matching,
-  counts, and the call list following a filter. `test/cloud.test.mjs` covers publish and the worker
+- **Tests:** `npm test` (node --test, 60 tests, offline). `test/filters.test.mjs`: buckets, matching,
+  counts, and the call list following a filter. `test/search.test.mjs`: typos, nicknames, F-150
+  spellings, no look-alikes for exact words, nothing guessed for numbers/nonsense, filter search. `test/cloud.test.mjs` covers publish and the worker
   (PIN gate, streamed cars, prefs, outcomes) against a fake D1 on `node:sqlite`. `test/scan.test.mjs` runs a real headless
   browser against an Express server that copies each site shape: CarGurus feed (400 cars,
   oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,

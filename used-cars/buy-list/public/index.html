@@ -58,6 +58,7 @@
   .sources .ok .ic { color:var(--green); }
   .sources .bad { color:var(--red); }
   .sources .skip { color:var(--mut); }
+  .fixnote { border-radius:10px; padding:12px 14px; margin-top:12px; font-size:17px; background:var(--navy-soft); color:var(--ink); border:1px solid #c9d6ea; }
   .notice { border-radius:10px; padding:12px 14px; margin-top:12px; font-size:16px; background:var(--amber-soft); color:#4d3500; border:1px solid #f0d78c; }
 
   /* Buttons */
@@ -290,6 +291,7 @@
     <p class="mut small" style="margin:4px 0 0;">Today's calls and the Top 10 follow these choices. Pick as many as you like in each category.</p>
     <div class="saved" id="savedBar"></div>
     <div class="fchips" id="fChips"></div>
+    <div class="fixnote hidden" id="fFix" role="status"></div>
     <div class="actions" style="margin-top:12px;"><button class="btn" id="fToggle" data-ftoggle>Show filters</button></div>
     <div id="fPanel" class="hidden">
       <label style="margin-top:16px;">Search anything
@@ -338,6 +340,7 @@
         </label>
       </div>
       <div class="count-line" id="allCount"></div>
+      <div class="fixnote hidden" id="allFix" role="status"></div>
     </div>
     <div id="all"></div>
   </section>
@@ -712,6 +715,15 @@ function fmtRange(key, [lo, hi]) {
   return lo != null && hi != null ? `${f(lo)} to ${f(hi)}` : lo != null ? `${f(lo)} or more` : `up to ${f(hi)}`;
 }
 
+// A misspelled search word is swapped for the closest words on the list; say so.
+function showFixes(id, fixes) {
+  const el = document.getElementById(id);
+  el.innerHTML = (fixes || []).map(x => x.to.length
+    ? `Did you mean <b>${x.to.map(esc).join("</b> or <b>")}</b>? Nothing is spelled “${esc(x.from)}”, so it's showing those.`
+    : `Nothing on the list is close to “${esc(x.from)}”. Check the spelling.`).join("<br>");
+  el.classList.toggle("hidden", !el.innerHTML);
+}
+
 function renderSaved() {
   const astro = noFilter(FILTER);
   document.getElementById("savedBar").innerHTML =
@@ -779,7 +791,7 @@ function renderPanel() {
     `<div class="fgroup"><h3>${esc(g.name)}</h3><div class="fgrid">${g.defs.map(facetBlock).join("")}</div></div>`).join("");
 }
 
-function renderFilters() { renderSaved(); renderChips(); renderPanel(); }
+function renderFilters() { renderSaved(); renderChips(); renderPanel(); showFixes("fFix", FSUM?.fixes); }
 
 async function loadFilters() {
   try { FSUM = await api("/filters" + fq("?")); } catch (e) { toast(e.message); }
@@ -874,6 +886,7 @@ async function browse() {
     KEYS.length = 0; // only the visible view's buttons are live; switching tabs re-renders
     const what = noFilter(FILTER) ? "" : " matching your filters";
     document.getElementById("allCount").textContent = r.total > r.rows.length ? `Showing the first ${r.rows.length} of ${num(r.total)} aged cars${what}` : plural(r.total, "aged car") + what;
+    showFixes("allFix", r.fixes);
     document.getElementById("all").innerHTML = r.rows.length
       ? r.rows.map(u => `<div class="card">${unitBlock(u, { showDealer: true, flush: true })}</div>`).join("")
       : `<div class="card empty">No aged cars match that search.</div>`;

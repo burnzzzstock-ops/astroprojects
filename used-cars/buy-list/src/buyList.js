@@ -3,7 +3,8 @@
 // Pure (no Node-only imports): the web version runs this same code in the browser.
 import { clamp01, money, localDay, csvCell, norm } from "./util.js";
 import { daysListed, isActive } from "./age.js";
-import { matches, facetCounts, FACET_DEFS } from "./filters.js";
+import { matches, facetCounts, withSearch, FACET_DEFS } from "./filters.js";
+import { queryMatches, resolveQuery } from "./search.js";
 
 // Call outcome → the car's status and how many days until it's due again.
 export const OUTCOMES = {
@@ -113,6 +114,8 @@ const isDue = (l, today) => !l.nextCallDay || l.nextCallDay <= today
 export function buildCallList(db, cfg, now = Date.now(), filter = {}) {
   const today = localDay(0, new Date(now));
   const hidden = db.hiddenDealers || {};
+  // search words are checked against every aged car, so a typo resolves the same way in every view
+  if (filter.q) filter = withSearch(filter, agedPool(db, cfg, now, false)).filter;
   const due = Object.values(db.listings)
     .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && isDue(l, today))
     .filter((l) => eligible(l, cfg, now))
@@ -139,27 +142,30 @@ export function buildCallList(db, cfg, now = Date.now(), filter = {}) {
 }
 
 // Every aged car still for sale (any status), dealer not hidden.
-const agedPool = (db, cfg, now) => Object.values(db.listings)
-  .filter((l) => !db.hiddenDealers[l.dealerKey] && eligible(l, cfg, now))
-  .map((l) => view(l, cfg, now));
-
-/** The filter panel: every category's options with counts, and how many cars match. */
-export function filterSummary(db, cfg, filter = {}, now = Date.now()) {
-  const pool = agedPool(db, cfg, now);
-  return { pool: pool.length, ...facetCounts(pool, filter), defs: FACET_DEFS };
+function agedPool(db, cfg, now, scored = true) {
+  const rows = Object.values(db.listings).filter((l) => !db.hiddenDealers[l.dealerKey] && eligible(l, cfg, now));
+  return scored ? rows.map((l) => view(l, cfg, now)) : rows;
 }
 
-/** Every aged car still for sale (any status), for "find me a Tacoma". */
+/**
+ * The filter panel: every category's options with counts, how many cars match, and any
+ * misspelled search word that was swapped for the closest words on the list (`fixes`).
+ */
+export function filterSummary(db, cfg, filter = {}, now = Date.now()) {
+  const pool = agedPool(db, cfg, now);
+  const { filter: f, fixes } = withSearch(filter, pool);
+  return { pool: pool.length, ...facetCounts(pool, f), defs: FACET_DEFS, fixes };
+}
+
+/**
+ * Every aged car still for sale (any status), for "find me a Tacoma". A misspelled word
+ * ("tacomaa") falls back to the closest words on the list; `fixes` says what was swapped.
+ */
 export function browseListings(db, cfg, { q = "", sort = "score", limit = 150, filter = {} } = {}, now = Date.now()) {
-  const terms = String(q).toLowerCase().split(/\s+/).filter(Boolean);
-  let rows = Object.values(db.listings)
-    .filter((l) => !db.hiddenDealers[l.dealerKey] && eligible(l, cfg, now));
-  if (terms.length) {
-    rows = rows.filter((l) => {
-      const hay = `${l.year} ${l.make} ${l.model} ${l.trim} ${l.title} ${l.dealer?.name} ${l.dealer?.city} ${l.vin}`.toLowerCase();
-      return terms.every((t) => hay.includes(t));
-    });
-  }
+  const pool = agedPool(db, cfg, now, false);
+  const rq = resolveQuery(q, pool);
+  filter = withSearch(filter, pool).filter; // its swaps are reported by filterSummary
+  const rows = rq ? pool.filter((l) => queryMatches(l, rq)) : pool;
   const by = {
     score: byBest,
     days: (a, b) => b.days - a.days,
@@ -168,7 +174,7 @@ export function browseListings(db, cfg, { q = "", sort = "score", limit = 150, f
     distance: (a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity),
   }[sort] || byBest;
   const scored = rows.map((l) => view(l, cfg, now)).filter((u) => matches(u, filter)).sort(by);
-  return { total: scored.length, rows: scored.slice(0, limit) };
+  return { total: scored.length, rows: scored.slice(0, limit), fixes: rq?.fixes || [] };
 }
 
 export function recordOutcome(db, keys, outcome, { notes = null, offer = null, timeZone = null } = {}, now = new Date()) {

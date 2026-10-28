@@ -165,7 +165,9 @@ http://localhost:4400).
   web version the filters and saved searches are kept online, so they're the same
   on every phone and computer.
 - **Search all cars** searches every aged car ("tacoma", "f-150 lariat",
-  "gulfport").
+  "gulfport"). Misspellings are forgiven: "tacomaa", "silvarado" or "chevy" still
+  find the cars and the page asks "Did you mean Tacoma?", and "f150", "F-150"
+  and "f 150" all work. The search box in the filters works the same way.
 - **Dealers** lists every dealer being watched, closest first, with how many aged
   cars each has and any site that couldn't be read on the last scan.
 - **Download spreadsheet** and **Print today's list** give you a copy for Excel or
@@ -226,8 +228,9 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 55 tests offline: the extractor against CarGurus, JSON-LD and
-dealer-API data shapes; merging and price drops; ranking; filters; call outcomes;
+`npm test` runs 60 tests offline: the extractor against CarGurus, JSON-LD and
+dealer-API data shapes; merging and price drops; ranking; filters; the forgiving
+search; call outcomes;
 a full headless-browser scan against fake local copies of each kind of site; and
 the web version's published data and Cloudflare API (PIN gate, outcomes,
 hide/unhide, saved searches). To try the web version locally: `node

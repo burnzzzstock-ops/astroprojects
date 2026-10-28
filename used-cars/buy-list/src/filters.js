@@ -6,6 +6,7 @@
 // Values come from what each site sent (body style, drivetrain, …), bucketed here, with
 // the title/trim as a fallback when a site doesn't say.
 import { norm } from "./util.js";
+import { queryMatches, resolveQuery } from "./search.js";
 
 const asList = (v) => (v == null || v === "" ? [] : Array.isArray(v) ? v : [v]);
 
@@ -176,12 +177,11 @@ function passes(d, have, want) {
   if (d.kind === "range") return have != null && (want[0] == null || have >= want[0]) && (want[1] == null || have <= want[1]);
   return !!have; // flag
 }
-const hay = (u) => `${u.year} ${u.make} ${u.model} ${u.trim} ${u.title} ${u.dealer?.name} ${u.dealer?.city} ${u.vin} ${u.stock}`.toLowerCase();
 
 // The categories a car fails, stopping at two (all the counts need to know).
 function failing(u, f) {
   const out = [];
-  if (f.q) { const h = hay(u); if (!f.q.toLowerCase().split(/\s+/).every((t) => h.includes(t))) out.push("q"); }
+  if (f.q && !queryMatches(u, f.q)) out.push("q");
   for (const [k, want] of Object.entries(f)) {
     if (out.length > 1) break;
     const d = BY_KEY[k];
@@ -190,6 +190,16 @@ function failing(u, f) {
   return out;
 }
 export const matches = (u, f) => !f || failing(u, f).length === 0;
+
+/**
+ * The filter with its search words worked out against these cars (a misspelled word
+ * falls back to the closest words on the list), plus what was swapped (`fixes`).
+ */
+export function withSearch(f, pool) {
+  if (!f?.q) return { filter: f || {}, fixes: [] };
+  const rq = resolveQuery(f.q, pool);
+  return { filter: { ...f, q: rq }, fixes: rq?.fixes || [] };
+}
 
 /**
  * For the panel: each category's options with how many cars have them, counted under all

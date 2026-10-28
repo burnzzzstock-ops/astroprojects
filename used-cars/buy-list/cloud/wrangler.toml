@@ -1,0 +1,24 @@
+# Cloudflare config for the Buy List web app. The two ids are filled in by
+# ensure.mjs during the GitHub deploy (it finds or creates the storage), so this
+# file never needs editing by hand.
+name = "buy-list"
+main = "worker.js"
+compatibility_date = "2026-09-15"
+workers_dev = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[vars]
+TIMEZONE = "America/Chicago"
+GITHUB_REPO = "burnzzzstock-ops/astroprojects"
+
+[[kv_namespaces]]
+binding = "DATA"
+id = "__KV_ID__"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "buylist"
+database_id = "__D1_ID__"

@@ -2,8 +2,13 @@
 
 Every morning, a list of used cars for sale within 100 miles of 39540 that have
 been listed a long time (60+ days), ranked and grouped by dealer, for the used car
-manager to call and try to buy. It runs on a PC at the store and costs nothing:
-no paid services, no hosting, no logins.
+manager to call and try to buy. It costs nothing (no paid services) and runs one
+of two ways:
+
+- **Web version (recommended):** a private web page that works on any phone or
+  computer, with nothing to install. GitHub runs the morning scan for free and
+  Cloudflare's free plan hosts the page behind a PIN. Setup is below.
+- **PC version:** runs on a computer at the store (see "PC version" further down).
 
 ## What it does
 
@@ -22,18 +27,79 @@ no paid services, no hosting, no logins.
   distance, and anything that changed since your last call.
 - **Groups by dealer**, so one call covers every aged car on that lot. Private
   sellers each get their own card.
-- **Tracks calls.** Each car takes one tap: No answer (back tomorrow), Left msg
-  (2 days), Too high (10 days), Won't sell (21 days), Negotiating (pinned at the
-  top), Bought, Pass. If a "too high" car drops its price, it comes back the next
-  morning showing the drop since your call.
-- **Phone-friendly page** with tap-to-call, a CSV download for Excel, and print.
+- **Tracks calls.** Each car takes one tap: No answer (back tomorrow), Left a
+  message (2 days), Price too high (10 days), Won't sell (21 days), Negotiating
+  (pinned at the top), Bought it, Not interested. If a "too high" car drops its
+  price, it comes back the next morning showing the drop since your call.
+- **Easy-to-read page** built for a busy desk: large type, plain words, a big green
+  Call button for each dealer, a spreadsheet download for Excel, and a print
+  layout.
 
-Leave it running and the scan happens by itself. With ~300 dealer sites (read
-three at a time), the morning scan takes an hour or two; the list updates when it
-finishes. If the PC was off or asleep at
-6:00, it scans as soon as the PC is back on.
+With ~300 dealer sites, the morning scan takes an hour or two; the list updates
+when it finishes.
 
-## Setup (Windows, one time)
+## Web version setup (one time, about 20 minutes)
+
+Everything here is free. No credit card is needed for GitHub or Cloudflare.
+
+1. **GitHub default branch.** In this repo on GitHub: **Settings → General →
+   Default branch**, switch it to **`main`**. GitHub only runs the scheduled
+   morning scan from the default branch.
+2. **Cloudflare account.** Sign up at https://dash.cloudflare.com/sign-up. Open
+   **Workers & Pages** once and pick a free `workers.dev` subdomain when it asks
+   (for example `astro-ford`). Copy your **Account ID** (shown on the Workers &
+   Pages page, or Account home → ⋯ next to the account → Copy account ID).
+3. **Cloudflare API token.** Profile icon → **My Profile → API Tokens → Create
+   Token → "Edit Cloudflare Workers"** template. Under Permissions click **+ Add
+   more** and add **Account · D1 · Edit**. Account Resources: your account; Zone
+   Resources: All zones. **Continue → Create Token**, then copy the token (it's
+   shown once).
+4. **GitHub secrets.** In this repo: **Settings → Secrets and variables → Actions
+   → New repository secret**, one at a time:
+
+   | Name | Value |
+   | --- | --- |
+   | `CLOUDFLARE_API_TOKEN` | the token from step 3 |
+   | `CLOUDFLARE_ACCOUNT_ID` | the Account ID from step 2 |
+   | `BUYLIST_PIN` | a PIN for the page, 6+ digits (the manager types it once per device) |
+   | `MARKETCHECK_API_KEY` | optional: a free key from https://www.marketcheck.com/apis |
+   | `BUYLIST_GITHUB_TOKEN` | optional: makes "Check for new cars now" work (see below) |
+
+5. **Deploy.** **Actions** tab → **Buy List deploy** → **Run workflow**. When it
+   turns green, open the run: the summary shows the link,
+   `https://buy-list.<your-subdomain>.workers.dev`.
+6. **First scan.** **Actions → Buy List scan → Run workflow.** It takes about an
+   hour. After that it runs by itself Monday to Saturday before the store opens.
+7. **Hand it over.** Send the manager the link and the PIN. On an iPhone: open
+   the link in Safari → Share → **Add to Home Screen**. On Android: Chrome → ⋮ →
+   **Add to Home screen**. It then opens like an app.
+
+**"Check for new cars now" button (optional).** Without it, the button explains
+that scans run every morning. To let it start a scan: GitHub → your picture →
+**Settings → Developer settings → Fine-grained tokens → Generate new token**,
+Repository access: only this repo, Permissions: **Actions: Read and write**. Save
+it as the `BUYLIST_GITHUB_TOKEN` secret and run **Buy List deploy** again.
+
+**Changes later:** edit `dealers.csv` (or anything in this folder) on GitHub and
+commit. The page redeploys by itself; new dealers are read on the next morning
+scan.
+
+**What's private:** this repo is public, so the code and `dealers.csv` can be seen
+by anyone. Call notes, offers, the call history and the PIN are stored only in
+your Cloudflare account, behind the PIN. The scan's memory (public listing data:
+prices, first-seen dates) is kept on the `buy-list-state` branch so each morning
+picks up where the last one left off.
+
+**Heads-up:** CarGurus often blocks cloud servers, so on the web version the
+dealer websites (and Marketcheck, if you add the free key) do most of the work.
+The **Dealers** tab shows which sites were read.
+
+## PC version
+
+Leave it running and the scan happens by itself at 6:00 AM. If the PC was off or
+asleep at 6:00, it scans as soon as the PC is back on.
+
+### Setup (Windows, one time)
 
 1. Install **Node.js LTS** from https://nodejs.org (accept the defaults).
 2. Get this folder onto the PC: on GitHub, click **Code → Download ZIP**, unzip it,
@@ -66,18 +132,24 @@ finishes. If the PC was off or asleep at
 
 ## Daily use
 
-Open the **Buy List** shortcut, or go to http://localhost:4400.
+Open the web link (or, on the PC version, the **Buy List** shortcut or
+http://localhost:4400).
 
-- **Today**: who to call, best first. Tap the phone number, then tap what happened.
-  **Notes** and **Offer $** save with the call.
-- **Whole lot: No answer / Left msg** logs it for every car at that dealer at once.
-- **Hide dealer** takes a lot off the list for good. Undo it on the **Hidden** tab.
-- **All aged** searches every aged car ("tacoma", "f-150 lariat", "gulfport").
+- **Today's calls**: who to call, best first, with a High or Medium priority tag
+  and a plain "Why it's on the list" line. Tap the green **Call** button, then tap
+  how the call went. **Notes from the call** and **Our offer** save with it.
+- **Nobody picked up?** One tap marks every car at that dealer No answer or Left a
+  message.
+- **Hide this dealer** takes a lot off the list for good. Undo it on the **Hidden
+  dealers** tab with **Show again**.
+- **Search all cars** searches every aged car ("tacoma", "f-150 lariat",
+  "gulfport").
 - **Dealers** lists every dealer being watched, closest first, with how many aged
   cars each has and any site that couldn't be read on the last scan.
-- **CSV** and **Print** give you a paper copy of today's calls.
+- **Download spreadsheet** and **Print today's list** give you a copy for Excel or
+  paper.
 
-### Using it from a phone
+### Using the PC version from a phone
 
 In `config.json`, set `"allowPhoneAccess": true` and an `"accessPin"` (for example
 `"4821"`), then restart (close the Buy List window and open `start.bat`). The
@@ -106,6 +178,12 @@ firewall: allow it on **private** networks.
 
 The top of the page shows how each source did on the last scan.
 
+**Web version:** open the latest **Buy List scan** run in the GitHub **Actions**
+tab. Its log lists each source, and when a site couldn't be read the run has a
+**buy-list-debug** download with what the scanner saw. Send those files to Claude
+to update the reader. The PC tips below apply too, except `config.json` (the web
+scan's settings are in `cloud/scan-config.json`).
+
 - **CarGurus blocked / no listings read.** CarGurus doesn't allow automated reading
   in its terms and may block it or change its site. Try `"headless": false` in
   config.json. The tool saves what it saw in `data\debug` (an `.html`, a `.png`,
@@ -122,7 +200,10 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 29 tests offline: the extractor against CarGurus, JSON-LD and
-dealer-API data shapes; merging and price drops; ranking; call outcomes; and a full
-headless-browser scan against fake local copies of each kind of site. See
+`npm test` runs 35 tests offline: the extractor against CarGurus, JSON-LD and
+dealer-API data shapes; merging and price drops; ranking; call outcomes; a full
+headless-browser scan against fake local copies of each kind of site; and the web
+version's published data and Cloudflare API (PIN gate, outcomes, hide/unhide).
+To try the web version locally: `node cloud/build.mjs`, put `ACCESS_PIN=123456`
+in `cloud/.dev.vars`, then `npx wrangler dev --local` in `cloud/`. See
 `../../CLAUDE.md` for how it's built.

@@ -42,7 +42,7 @@ export async function runScan({
   try {
     if (want("marketcheck")) {
       if (!cfg.sources.marketcheck.apiKey) {
-        scan.sources.marketcheck = { ok: false, skipped: true, note: "no free API key in config.json (optional)" };
+        scan.sources.marketcheck = { ok: false, skipped: true, note: "no free API key set (optional)" };
       } else {
         const month = new Date().toISOString().slice(0, 7);
         try {
@@ -73,7 +73,10 @@ export async function runScan({
         try {
           const r = await fetchDealerSites(cfg, { context: await context(), log, debugDir, dealers });
           obs.push(...r.listings);
-          scan.sources.dealerSites = { ok: r.dealersOk > 0, found: r.listings.length, dealersOk: r.dealersOk, dealerCount: r.dealerCount, failed: r.dealersFailed };
+          scan.sources.dealerSites = {
+            ok: r.dealersOk > 0, found: r.listings.length, dealersOk: r.dealersOk, dealerCount: r.dealerCount, failed: r.dealersFailed,
+            ...(r.dealersOk ? {} : { error: `none of the ${r.dealerCount} dealer sites could be read` }),
+          };
         } catch (e) {
           scan.sources.dealerSites = { ok: false, error: e.message.split("\n")[0] };
         }

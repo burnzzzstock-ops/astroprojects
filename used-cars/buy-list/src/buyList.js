@@ -1,7 +1,8 @@
 // Ranking the aged cars into today's call list, and recording call outcomes.
 // Pure functions over the db object (the server wraps them with readDb/withDb).
-import { clamp01, money, localDay, csvCell, dealerKeyOf, zipDistance, zipForCity, daysSince } from "./util.js";
-import { daysListed, isActive } from "./listings.js";
+// Pure (no Node-only imports): the web version runs this same code in the browser.
+import { clamp01, money, localDay, csvCell } from "./util.js";
+import { daysListed, isActive } from "./age.js";
 
 // Call outcome → the car's status and how many days until it's due again.
 export const OUTCOMES = {
@@ -57,7 +58,7 @@ function view(l, cfg, now) {
 }
 
 // Aged, still for sale, inside the filters, dealer not hidden.
-function eligible(l, cfg, now) {
+export function eligible(l, cfg, now) {
   if (!isActive(l, now)) return false;
   const d = daysListed(l, now);
   if (d < cfg.minDaysListed || d > cfg.maxDaysListed) return false;
@@ -82,11 +83,16 @@ const RIDE_ALONG_MAX = 6;
  * call covers every aged car on that lot; that dealer's other due cars ride along.
  * Cars being negotiated are pinned separately.
  */
+// Due today: never called, its call-back day has come, or its price dropped after
+// the last call (a "too high" car comes back as soon as the dealer cuts it).
+const isDue = (l, today) => !l.nextCallDay || l.nextCallDay <= today
+  || (l.status === "working" && l.lastDropAt && l.lastCallAt && l.lastDropAt > l.lastCallAt);
+
 export function buildCallList(db, cfg, now = Date.now()) {
   const today = localDay(0, new Date(now));
   const hidden = db.hiddenDealers || {};
   const due = Object.values(db.listings)
-    .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && (!l.nextCallDay || l.nextCallDay <= today))
+    .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && isDue(l, today))
     .filter((l) => eligible(l, cfg, now))
     .map((l) => view(l, cfg, now))
     .sort((a, b) => b.score - a.score);
@@ -105,7 +111,7 @@ export function buildCallList(db, cfg, now = Date.now()) {
     .filter((l) => l.status === "negotiating" && !hidden[l.dealerKey])
     .map((l) => view(l, cfg, now));
   const later = Object.values(db.listings)
-    .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && l.nextCallDay > today && eligible(l, cfg, now)).length;
+    .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && !isDue(l, today) && eligible(l, cfg, now)).length;
   return { today, dealers: [...byDealer.values()], negotiating, dueTotal: due.length, laterCount: later };
 }
 
@@ -131,7 +137,7 @@ export function browseListings(db, cfg, { q = "", sort = "score", limit = 150 } 
   return { total: scored.length, rows: scored.slice(0, limit) };
 }
 
-export function recordOutcome(db, keys, outcome, { notes = null, offer = null } = {}, now = new Date()) {
+export function recordOutcome(db, keys, outcome, { notes = null, offer = null, timeZone = null } = {}, now = new Date()) {
   const o = OUTCOMES[outcome];
   if (!o) throw new Error(`unknown outcome: ${outcome}`);
   const note = notes && String(notes).trim() ? String(notes).trim().slice(0, 1000) : null;
@@ -151,7 +157,7 @@ export function recordOutcome(db, keys, outcome, { notes = null, offer = null } 
       l.lastOutcome = outcome;
       l.lastCallAt = at;
       l.priceAtLastCall = l.price ?? null;
-      l.nextCallDay = o.days ? localDay(o.days, now) : null;
+      l.nextCallDay = o.days ? localDay(o.days, now, timeZone) : null;
       if (outcome === "bought") l.boughtAt = at;
     }
     if (note) l.notes = note;
@@ -184,30 +190,6 @@ export function status(db, cfg, now = Date.now()) {
       allSeen: Object.keys(db.listings).length,
     },
   };
-}
-
-/**
- * The dealers.csv roster with how each did: aged cars on the list, cars seen on
- * the site in the last few days, and the error if the last scan couldn't read it.
- */
-export function dealerRoster(db, cfg, dealers, now = Date.now()) {
-  const failed = new Map((db.scans[0]?.sources?.dealerSites?.failed || []).map((f) => [f.name, f.error]));
-  const byKey = new Map();
-  for (const l of Object.values(db.listings)) {
-    const r = byKey.get(l.dealerKey) || { aged: 0, seen: 0 };
-    if (eligible(l, cfg, now) && !["bought", "passed"].includes(l.status)) r.aged++;
-    if (l.seen?.dealer && (daysSince(l.seen.dealer, now) ?? Infinity) <= 3) r.seen++;
-    byKey.set(l.dealerKey, r);
-  }
-  const scanned = !!db.scans[0]?.sources?.dealerSites && !db.scans[0].sources.dealerSites.skipped;
-  return dealers.map((d) => {
-    const r = byKey.get(dealerKeyOf({ name: d.name }, "")) || { aged: 0, seen: 0 };
-    return {
-      name: d.name, phone: d.phone || null, city: d.city || null, state: d.state || null, url: d.url, type: d.type,
-      distance: zipDistance(cfg.zip, d.zip || zipForCity(d.city, d.state)),
-      aged: r.aged, seen: r.seen, scanned, error: failed.get(d.name) || null,
-    };
-  }).sort((a, b) => (a.distance ?? 999) - (b.distance ?? 999));
 }
 
 export function callListCsv(list) {

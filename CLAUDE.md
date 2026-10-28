@@ -9,19 +9,25 @@ department/project. Read this first in any new session.
   Nothing here imports from, writes to, or deploys with it, and nothing here goes into it.
   A first Buy List was built inside Riley and backed out at the operator's request.
 - **No paid services.** Free data sources and free tiers that can't bill (no card on file).
-  Projects run on a store PC, not paid hosting.
+  Hosting is a store PC or free tiers only: GitHub Actions (public repo = unlimited minutes)
+  and Cloudflare Workers/KV/D1 free plan. Never Railway or anything with a card on file.
 - **No customer PII in the repo.** Test data uses obviously fake names, 555-01xx phones and
-  made-up VINs. Real data stays in each project's gitignored `data/` folder on the PC.
+  made-up VINs. Real data stays in each project's gitignored `data/` folder on the PC, or in
+  the project's Cloudflare storage. The repo is PUBLIC: secrets live only in GitHub
+  repository secrets, never in chat or files.
+- **Default branch must be `main`.** Scheduled workflows only run from the default branch.
+  (`claude/gifted-thompson-ju8pa5` holds another session's Hiring Line work: leave it alone.)
 - **Keep this file current.** When a session changes how a project works, update its section
   here in the same commit.
 
 ## used-cars/buy-list: aged-inventory Buy List
 
 The used car manager's daily call sheet: used cars for sale within 100 mi of 39540 listed
-60+ days, ranked, grouped by dealer, with call outcomes tracked. Node 20+, runs locally
-(`npm start` → http://localhost:4400). Windows install is `setup.bat`, which runs npm install,
-`npx playwright install chromium`, copies the config template, adds a Startup shortcut to
-`start.bat` (restart loop) and a desktop `.url` link.
+60+ days, ranked, grouped by dealer, with call outcomes tracked. Node 20+. Two ways to run
+the same code: the WEB VERSION (primary, since store IT won't allow installs; see "Web
+version" below) or locally (`npm start` → http://localhost:4400). The Windows install is
+`setup.bat`, which runs npm install, `npx playwright install chromium`, copies the config
+template, adds a Startup shortcut to `start.bat` (restart loop) and a desktop `.url` link.
 
 - **Storage:** one JSON file, `data/buylist.json` (`src/store.js`), with no native deps. Every write
   is a synchronous load → modify → save (`withDb`) and atomic (tmp file + rename, plus a `.bak`),
@@ -74,17 +80,55 @@ The used car manager's daily call sheet: used cars for sale within 100 mi of 395
   LLC/Inc; private sellers get one key per car), plus up to 6 per card riding along, with
   negotiating cars pinned. Outcomes: no_answer +1d, left_message +2d, too_high +10d,
   not_selling +21d, negotiating, bought, pass, reopen. Due days are local calendar days.
-- **Dealers tab** (`dealerRoster` in buyList.js, `GET /api/dealers`): every dealers.csv row with
+- **Pure modules** (bundle for the browser, no Node imports): `src/buyList.js`, `src/age.js`
+  (`daysListed`, `isActive`, `ACTIVE_DAYS`), `src/util.js` (`localDay(offset, now, timeZone)`:
+  cloud code passes "America/Chicago" since Cloudflare/GitHub run on UTC). Node-only:
+  `src/geo.js` (`zipDistance`, `zipForCity` via `zipcodes`), `src/roster.js`, `src/publish.js`.
+- **Dealers tab** (`dealerRoster` in roster.js, `GET /api/dealers`): every dealers.csv row with
   distance, aged count, cars seen on its site in 3 days, and the last scan's error for it.
 - **Server** (`src/server.js`): Express 5 on 127.0.0.1, or 0.0.0.0 only when `allowPhoneAccess`
   AND `accessPin` are set (non-local requests need the PIN). Manual scan has a 30-min cooldown.
   The scheduler ticks every 5 min: on scan days at/after `scanTime`, it runs once per day if no
   scheduled scan ran today (catches up after sleep). `data/scan.lock` (6h stale) prevents
   overlap with `npm run scan`.
-- **Page** (`public/index.html`): dark, phone-first, tap-to-call. Buttons reference cars by index
-  (never embed site text). Third-party URLs go through `safeUrl` (http/https only) and all
-  text is escaped.
-- **Tests:** `npm test` (node --test, 29 tests, offline). `test/scan.test.mjs` runs a real headless
+- **Page** (`public/index.html`, shared by both versions): deliberately NOT Riley's look. Light
+  "business desk" style for Gen X/boomer users (2026-10-28): white cards on #eef1f5, navy
+  #1c3f6e header/primary buttons, a full-width green #16733a "Call (xxx) xxx-xxxx" button per
+  dealer, Public Sans (Google Fonts, plain zeros; Atkinson Hyperlegible Next was dropped for its
+  slashed zeros in prices) at 18px base, 48px+ tap targets, sentence case, plain words ("Price
+  too high", "Not interested", "Why it's on the list:" sentence, High/Medium priority badge
+  instead of the raw score: ≥60/≥40 of 85). 2×2 tabs and 2-column outcome buttons on phones.
+  In-page PIN dialog (`askPin`, re-asks on every 401) instead of `prompt()`. Print layout hides
+  controls. Buttons reference cars by index (never embed site text). Third-party URLs go
+  through `safeUrl` (http/https only) and all text is escaped. Keep the element ids/function
+  names: `cloud/adapter.js` and `cloud/build.mjs` (needs `<title>` and the first `<script>` to
+  be the inline one) depend on them.
+- **Web version** (`cloud/`, `scripts/cloud-scan.mjs`, `.github/workflows/buy-list-*.yml`):
+  - **Scan** = GitHub Actions `buy-list-scan.yml`, cron `45 10 * * 1-6` (5:45 AM CDT / 4:45 AM
+    CST) + manual. Restores `market.json.gz` (the scan's db) from the orphan `buy-list-state`
+    branch, exports called keys + hidden dealers from D1, runs `cloud-scan.mjs` with
+    `cloud/scan-config.json` (excludes "astro ford", dealer concurrency 6, 2-min site timeout),
+    writes KV `status`/`aged`/`dealers` (`publish.js`: only aged-and-active cars plus anything
+    called, KEEP fields only) and force-pushes the new state branch. Debug files → artifact.
+  - **Site** = Cloudflare Worker `cloud/worker.js` + static assets (`cloud/public/`, built by
+    `cloud/build.mjs`: the shared page + `logic.js` [esbuild IIFE `BuyLogic` of buyList.js] +
+    `adapter.js`). The worker only passes KV strings through (`GET /api/data`, stays under the
+    10ms CPU limit) and stores the desk in D1 (`schema.sql`: car_state, calls, hidden,
+    pin_failures). `adapter.js` overrides `fetch("/api/…")` and answers status/today/listings/
+    dealers/hidden in the browser with the same ranking code; outcomes and hide/unhide POST to
+    the worker and are mirrored locally; `BUYLIST_CLOUD.downloadCsv()` builds the CSV
+    client-side. PIN: `ACCESS_PIN` secret, `x-pin` header, constant-time compare, 20 wrong
+    tries/IP/hour → 429. `/api/scan` explains the schedule, or dispatches the scan workflow when
+    `GITHUB_TOKEN` (from BUYLIST_GITHUB_TOKEN) is set (30-min cooldown).
+  - **Deploy** = `buy-list-deploy.yml` on push to main (skips quietly without secrets) or manual:
+    tests → `cloud/ensure.mjs` (finds/creates KV `buylist-data` + D1 `buylist`, patches ids into
+    wrangler.toml, which stays committed with placeholders) → schema → build → `wrangler deploy`
+    → sets ACCESS_PIN. Secrets: CLOUDFLARE_API_TOKEN ("Edit Cloudflare Workers" + Account·D1·Edit),
+    CLOUDFLARE_ACCOUNT_ID, BUYLIST_PIN; optional MARKETCHECK_API_KEY, BUYLIST_GITHUB_TOKEN.
+  - Local try-out: `node cloud/build.mjs`, `cloud/.dev.vars` with ACCESS_PIN, `npx wrangler dev
+    --local` in cloud/ (gitignored: cloud/public, .wrangler, .dev.vars, .scan-data).
+- **Tests:** `npm test` (node --test, 35 tests, offline). `test/cloud.test.mjs` covers publish and
+  the worker against a fake D1 on `node:sqlite`. `test/scan.test.mjs` runs a real headless
   browser against an Express server that copies each site shape: CarGurus feed (400 cars,
   oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,
   dealer API + Next, JSON-LD, plain HTML + Load more, and a broken site.

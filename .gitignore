@@ -5,3 +5,7 @@ Thumbs.db
 # Buy List: per-PC settings (may hold a key/PIN) and its data
 used-cars/buy-list/config.json
 used-cars/buy-list/data/
+used-cars/buy-list/.scan-data/
+used-cars/buy-list/cloud/public/
+used-cars/buy-list/cloud/.wrangler/
+used-cars/buy-list/cloud/.dev.vars

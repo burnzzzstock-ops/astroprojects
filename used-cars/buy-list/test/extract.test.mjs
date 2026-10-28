@@ -6,7 +6,8 @@ import { isolate } from "./helpers.mjs";
 
 isolate();
 const { extractListings, parseJsonLoose, normalizeObject } = await import("../src/extract.js");
-const { toNumber, parseCsv, dealerKeyOf, zipForCity } = await import("../src/util.js");
+const { toNumber, parseCsv, dealerKeyOf } = await import("../src/util.js");
+const { zipForCity } = await import("../src/geo.js");
 const { isHomepage } = await import("../src/sources/dealerSites.js");
 
 test("CarGurus-style feed: price, miles, days listed, seller, distance, deal rating", () => {

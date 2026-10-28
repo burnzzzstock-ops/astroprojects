@@ -1,14 +1,23 @@
-import zipcodes from "zipcodes";
+// Pure helpers, no Node-only imports: this file also runs in the browser and on
+// Cloudflare (the web version). ZIP-code math lives in geo.js.
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const norm = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 export const clamp01 = (x) => Math.max(0, Math.min(1, x));
 export const money = (n) => "$" + Math.round(Number(n)).toLocaleString("en-US");
 
-// Local (PC clock) calendar day, YYYY-MM-DD, optionally offset by whole days.
-export function localDay(offsetDays = 0, now = new Date()) {
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+// Calendar day, YYYY-MM-DD, optionally offset by whole days. Uses the machine's
+// clock, or an explicit time zone (Cloudflare and GitHub's servers run on UTC).
+export function localDay(offsetDays = 0, now = new Date(), timeZone = null) {
+  let y, m, d;
+  if (timeZone) {
+    [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" })
+      .format(now).split("-").map(Number);
+    m -= 1;
+  } else {
+    [y, m, d] = [now.getFullYear(), now.getMonth(), now.getDate()];
+  }
+  return new Date(Date.UTC(y, m, d + offsetDays)).toISOString().slice(0, 10);
 }
 
 export function daysSince(iso, now = Date.now()) {
@@ -22,25 +31,6 @@ export function toNumber(v) {
   if (typeof v === "object") return toNumber(v.value ?? v.amount ?? v.price ?? null);
   const n = typeof v === "number" ? v : Number(String(v).replace(/[^0-9.]/g, ""));
   return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
-}
-
-// Straight-line miles between two US ZIPs (free offline table), or null if unknown.
-export function zipDistance(a, b) {
-  const za = String(a ?? "").slice(0, 5), zb = String(b ?? "").slice(0, 5);
-  if (!/^\d{5}$/.test(za) || !/^\d{5}$/.test(zb)) return null;
-  const d = zipcodes.distance(za, zb);
-  return Number.isFinite(d) ? d : null;
-}
-
-// A ZIP for "City, ST" when a dealer row has none (for distance only).
-export function zipForCity(city, state) {
-  if (!city || !state) return null;
-  const c = String(city).trim();
-  for (const name of [c, c.replace(/[^a-z ]/gi, ""), c.replace(/\bSt\.?\s/i, "Saint "), c.replace(/([a-z])([A-Z])/g, "$1 $2")]) {
-    const hit = zipcodes.lookupByName(name, String(state).trim().toUpperCase())[0];
-    if (hit) return hit.zip;
-  }
-  return null;
 }
 
 const SUFFIX = /\b(llc|inc|incorporated|co|corp|corporation|ltd|the)\b/g;

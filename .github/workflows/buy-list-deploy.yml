@@ -1,0 +1,91 @@
+# Deploys the Buy List web app to Cloudflare (free tier). Runs on every push that
+# touches used-cars/buy-list, or by hand: Actions → Buy List deploy → Run workflow.
+# Needs repository secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and
+# BUYLIST_PIN (setup steps: used-cars/buy-list/README.md, "Web version").
+name: Buy List deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "used-cars/buy-list/**"
+      - ".github/workflows/buy-list-deploy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: buy-list-deploy
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.secrets.outputs.ready }}
+    steps:
+      - id: secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BUYLIST_PIN: ${{ secrets.BUYLIST_PIN }}
+        run: |
+          missing=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          [ -n "$BUYLIST_PIN" ] || missing="$missing BUYLIST_PIN"
+          if [ -z "$missing" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "::notice::Buy List web version isn't set up yet (missing secrets:$missing), so nothing was deployed."
+            exit 0
+          fi
+          echo "::error::Add these repository secrets first (Settings → Secrets and variables → Actions):$missing"
+          exit 1
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: used-cars/buy-list
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: used-cars/buy-list/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Tests
+        run: npm test
+      - name: Find or create the Cloudflare storage
+        run: node cloud/ensure.mjs
+      - name: Database tables
+        working-directory: used-cars/buy-list/cloud
+        run: npx wrangler d1 execute buylist --remote --yes --file schema.sql
+      - name: Build the page
+        run: node cloud/build.mjs
+      - name: Deploy
+        working-directory: used-cars/buy-list/cloud
+        run: |
+          npx wrangler deploy | tee "$RUNNER_TEMP/deploy.log"
+          url=$(grep -o 'https://[a-zA-Z0-9.-]*workers\.dev' "$RUNNER_TEMP/deploy.log" | head -1)
+          echo "### Buy List is live: $url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Set the PIN
+        working-directory: used-cars/buy-list/cloud
+        env:
+          BUYLIST_PIN: ${{ secrets.BUYLIST_PIN }}
+        run: printf '%s' "$BUYLIST_PIN" | npx wrangler secret put ACCESS_PIN
+      - name: Let the Scan now button start scans (optional BUYLIST_GITHUB_TOKEN secret)
+        working-directory: used-cars/buy-list/cloud
+        env:
+          BUYLIST_GITHUB_TOKEN: ${{ secrets.BUYLIST_GITHUB_TOKEN }}
+        run: |
+          if [ -n "$BUYLIST_GITHUB_TOKEN" ]; then printf '%s' "$BUYLIST_GITHUB_TOKEN" | npx wrangler secret put GITHUB_TOKEN; else echo "No BUYLIST_GITHUB_TOKEN secret: scans run on schedule only."; fi

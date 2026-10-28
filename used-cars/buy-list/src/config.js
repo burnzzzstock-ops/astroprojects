@@ -54,6 +54,8 @@ export function loadConfig(file = process.env.BUYLIST_CONFIG || path.join(ROOT, 
     }
   }
   const c = merge(DEFAULTS, user);
+  // The web version's scan gets its free Marketcheck key from a GitHub secret.
+  if (process.env.MARKETCHECK_API_KEY) c.sources.marketcheck.apiKey = process.env.MARKETCHECK_API_KEY;
   c.dataDir = path.resolve(ROOT, c.dataDir);
   c.sources.dealerSites.file = path.resolve(ROOT, c.sources.dealerSites.file);
   return c;

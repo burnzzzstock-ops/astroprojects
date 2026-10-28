@@ -1,8 +1,9 @@
 // Merging what each source saw into one record per car (keyed by VIN), and the
 // rules for "how long has it been listed". Pure functions over the db object.
-import { norm, daysSince, dealerKeyOf, zipDistance } from "./util.js";
+import { norm, daysSince, dealerKeyOf } from "./util.js";
+import { zipDistance } from "./geo.js";
 
-export const ACTIVE_DAYS = 3;   // still for sale if any source saw it this recently
+export { ACTIVE_DAYS, daysListed, isActive } from "./age.js";
 const PRUNE_DAYS = 45;          // forget never-called cars nobody has seen in this long
 
 const hasWords = (short, long) => (` ${long} `).includes(` ${short} `);
@@ -29,22 +30,6 @@ export function resolveDealerKey(db, dealer, listingKeyValue) {
 
 export const listingKey = (o) =>
   o.vin || `${o.source}:${o.sourceId || `${norm(o.title)}|${o.price ?? ""}|${o.miles ?? ""}`}`;
-
-/**
- * Days listed = the longest of: what each source reported (aged forward from the
- * day it said so) and how long this tool has been seeing the car itself.
- */
-export function daysListed(l, now = Date.now()) {
-  let best = daysSince(l.firstSeenAt, now) ?? 0;
-  for (const r of Object.values(l.reported || {})) {
-    if (r && r.days != null) best = Math.max(best, r.days + (daysSince(r.at, now) ?? 0));
-  }
-  return Math.round(best);
-}
-
-export function isActive(l, now = Date.now()) {
-  return (daysSince(l.lastSeenAt, now) ?? Infinity) <= ACTIVE_DAYS;
-}
 
 /**
  * Apply one scan's observations to the db. Returns { kept, excluded, newCount, dropCount }.

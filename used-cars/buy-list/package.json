@@ -17,5 +17,9 @@
     "express": "^5.1.0",
     "playwright": "1.63.0",
     "zipcodes": "^8.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "wrangler": "4.148.0"
   }
 }

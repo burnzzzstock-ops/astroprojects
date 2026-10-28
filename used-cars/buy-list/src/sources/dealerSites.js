@@ -9,7 +9,8 @@
 import fs from "node:fs";
 import { extractListings, parseJsonLoose, normalizeObject } from "../extract.js";
 import { collectJson, embeddedJson, looksBlocked, settle, friendlyNetError } from "../browser.js";
-import { parseCsv, sleep, zipDistance, zipForCity } from "../util.js";
+import { parseCsv, sleep } from "../util.js";
+import { zipDistance, zipForCity } from "../geo.js";
 import { saveDebug } from "./cargurus.js";
 
 export function readDealers(file) {

@@ -194,14 +194,15 @@ test("other sources' dealer names land on the dealers.csv dealer's card", () => 
   assert.equal(key(17), "toyota", "one-word names never merge");
 });
 
-test("dealer roster: aged/seen counts per dealers.csv row, last error, sorted by distance", () => {
+test("dealer roster: aged/seen counts per dealers.csv row, last error, sorted by distance", async () => {
   const db = freshDb();
   applyObservations(db, [
     obs(20, { source: "dealer", dealer: { name: "Example Motors", city: "Gulfport", state: "MS", zip: "39501" } }),
     obs(21, { source: "dealer", daysListed: 10, dealer: { name: "Example Motors", city: "Gulfport", state: "MS", zip: "39501" } }),
   ], config);
   db.scans.unshift({ sources: { dealerSites: { ok: true, failed: [{ name: "Broken Lot", error: "no cars found on the page" }] } } });
-  const roster = B.dealerRoster(db, config, [
+  const { dealerRoster } = await import("../src/roster.js");
+  const roster = dealerRoster(db, config, [
     { name: "Broken Lot", city: "Mobile", state: "AL", zip: "36602", url: "https://example.com/" },
     { name: "Example Motors", city: "Gulfport", state: "MS", zip: "39501", url: "https://example.org/" },
   ]);
@@ -209,4 +210,21 @@ test("dealer roster: aged/seen counts per dealers.csv row, last error, sorted by
   assert.equal(roster[0].seen, 2);
   assert.equal(roster[0].aged, 1, "only the 60+ day car counts as aged");
   assert.equal(roster[1].error, "no cars found on the page");
+});
+
+test("a price drop after a 'too high' call puts the car back on today's list", () => {
+  const db = marketDb();
+  const k = obs(0).vin;
+  B.recordOutcome(db, [k], "too_high");
+  const l = db.listings[k];
+  l.nextCallDay = localDay(10); // as the web version stores it: the scan never edits call state
+  l.lastDropAt = new Date(Date.now() + 1000).toISOString();
+  assert.ok(B.buildCallList(db, { ...config, dailyListSize: 100 }).dealers.some((d) => d.units.some((u) => u.key === k)));
+});
+
+test("due days in a set time zone (Cloudflare and GitHub run on UTC)", () => {
+  const lateCentral = new Date("2026-10-28T03:30:00Z"); // 10:30 PM Oct 27 in Central, already Oct 28 in UTC
+  assert.equal(localDay(0, lateCentral, "America/Chicago"), "2026-10-27");
+  assert.equal(localDay(1, lateCentral, "America/Chicago"), "2026-10-28");
+  assert.equal(localDay(0, lateCentral, "UTC"), "2026-10-28");
 });

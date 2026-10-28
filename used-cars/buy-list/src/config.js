@@ -9,12 +9,15 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 
 export const DEFAULTS = {
   zip: "39540",
-  radiusMiles: 100,
+  radiusMiles: 200,
   minDaysListed: 60,          // "listed a long time"
   maxDaysListed: 365,         // older than this is usually a stale/zombie listing
-  minPrice: 4000,
+  minPrice: 10000,            // skip anything cheaper
+  focusMakes: [],             // makes ranked first, e.g. ["Ford"]
+  focusUnderMiles: 0,         // then cars under this many miles (0 = off)
   maxMiles: 175000,
   dailyListSize: 25,          // units on today's call list
+  topListSize: 10,            // the "Top 10 today" ranked list at the top of Today
   scanTime: "06:00",          // local PC time
   scanDays: [1, 2, 3, 4, 5, 6], // 0 = Sunday
   // Seller-name fragments to never list: your own store + retail chains that don't wholesale.
@@ -27,7 +30,9 @@ export const DEFAULTS = {
     executablePath: "",       // leave blank: uses installed Google Chrome, else Playwright's Chromium
   },
   sources: {
-    cargurus: { enabled: true, maxPages: 60, pageDelayMs: 2500 },
+    // 48 cars/page, oldest first, stopping on its own at the 60-day line. CarGurus returns nothing past
+    // 10,000 results, so the search runs once per price band (edges, from minPrice up); maxPages is the total.
+    cargurus: { enabled: true, maxPages: 400, pageDelayMs: 2500, priceBands: [10000, 15000, 20000, 25000, 30000, 40000, 60000] },
     marketcheck: { enabled: true, apiKey: "", maxPages: 15, monthlyCallCap: 450 },
     // concurrency = dealer sites read at once; dealerTimeoutMs = give up on one site after this long
     dealerSites: { enabled: true, file: "dealers.csv", maxPagesPerDealer: 8, pageDelayMs: 1500, concurrency: 3, dealerTimeoutMs: 180000 },

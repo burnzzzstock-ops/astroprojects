@@ -2,14 +2,15 @@
 // Runs where the scan runs (needs the ZIP table for distances).
 import { daysSince, dealerKeyOf } from "./util.js";
 import { zipDistance, zipForCity } from "./geo.js";
-import { eligible } from "./buyList.js";
+import { eligible, lastRun } from "./buyList.js";
 
 /**
  * The dealers.csv roster with how each did: aged cars on the list, cars seen on
  * the site in the last few days, and the error if the last scan couldn't read it.
  */
 export function dealerRoster(db, cfg, dealers, now = Date.now()) {
-  const failed = new Map((db.scans[0]?.sources?.dealerSites?.failed || []).map((f) => [f.name, f.error]));
+  const last = lastRun(db, "dealerSites");
+  const failed = new Map((last?.failed || []).map((f) => [f.name, f.error]));
   const byKey = new Map();
   for (const l of Object.values(db.listings)) {
     const r = byKey.get(l.dealerKey) || { aged: 0, seen: 0 };
@@ -17,7 +18,7 @@ export function dealerRoster(db, cfg, dealers, now = Date.now()) {
     if (l.seen?.dealer && (daysSince(l.seen.dealer, now) ?? Infinity) <= 3) r.seen++;
     byKey.set(l.dealerKey, r);
   }
-  const scanned = !!db.scans[0]?.sources?.dealerSites && !db.scans[0].sources.dealerSites.skipped;
+  const scanned = !!last && !last.skipped;
   return dealers.map((d) => {
     const r = byKey.get(dealerKeyOf({ name: d.name }, "")) || { aged: 0, seen: 0 };
     return {

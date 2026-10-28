@@ -1,13 +1,14 @@
 // Web version glue. The page (public/index.html, shared with the local app) talks
-// to /api/status, /api/today, /api/listings and so on. Online, the server only
-// hands over the raw data once (GET /api/data); this answers those page calls in
-// the browser with the same ranking code (BuyLogic), and sends call outcomes and
-// hidden dealers to the server, mirroring what it saved.
+// to /api/status, /api/today, /api/listings, /api/filters and so on. Online, the
+// server only hands over the raw data (GET /api/data + /api/aged); this answers
+// those page calls in the browser with the same ranking and filter code
+// (BuyLogic), and sends call outcomes, hidden dealers and the filter/saved
+// searches to the server, mirroring what it saved.
 (() => {
   const L = window.BuyLogic;
   const realFetch = window.fetch.bind(window);
   const RELOAD_MS = 10 * 60e3;
-  let D = null; // { db, cfg, roster, at }
+  let D = null; // { db, cfg, roster, prefs, at }
 
   const reply = (body, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -21,11 +22,12 @@
   }
 
   async function load(headers) {
-    const r = await realFetch("/api/data", { headers });
+    const [r, a] = await Promise.all([realFetch("/api/data", { headers }), realFetch("/api/aged", { headers })]);
     if (!r.ok) return r; // 401 → the page asks for the PIN and tries again
-    const data = await r.json();
+    if (!a.ok) return a;
+    const [data, aged] = await Promise.all([r.json(), a.json()]);
     const listings = {};
-    for (const l of data.aged) {
+    for (const l of aged) {
       l.status = "new";
       listings[l.key] = l;
     }
@@ -48,7 +50,7 @@
       hiddenDealers: Object.fromEntries(data.desk.hidden.map((h) => [h.dealer_key, h.name])),
       marketcheckCalls: { [month]: st.marketcheck?.used ?? 0 },
     };
-    D = { db, cfg, roster: data.dealers, at: Date.now() };
+    D = { db, cfg, roster: data.dealers, prefs: data.desk.prefs || { active: {}, saved: [] }, at: Date.now() };
     return null;
   }
 
@@ -67,10 +69,13 @@
         if (failed) return failed;
       }
       if (p === "/api/status") return reply({ ...L.status(D.db, D.cfg), running: false, outcomes: labels() });
-      if (p === "/api/today") return reply(L.buildCallList(D.db, D.cfg));
+      const filter = L.parseFilter(u.searchParams.get("f"));
+      if (p === "/api/today") return reply(L.buildCallList(D.db, D.cfg, Date.now(), filter));
       if (p === "/api/listings") {
-        return reply(L.browseListings(D.db, D.cfg, { q: u.searchParams.get("q") || "", sort: u.searchParams.get("sort") || "score", limit: 150 }));
+        return reply(L.browseListings(D.db, D.cfg, { q: u.searchParams.get("q") || "", sort: u.searchParams.get("sort") || "score", limit: 150, filter }));
       }
+      if (p === "/api/filters") return reply(L.filterSummary(D.db, D.cfg, filter));
+      if (p === "/api/prefs") return reply(D.prefs);
       if (p === "/api/dealers") return reply(D.roster);
       if (p === "/api/hidden") return reply(Object.entries(D.db.hiddenDealers).map(([dealerKey, name]) => ({ dealerKey, name })));
       return reply({ error: "not found" }, 404);
@@ -87,6 +92,11 @@
       }
       return r;
     }
+    if (p === "/api/prefs") {
+      const r = await realFetch(p, { method: "PUT", headers, body: opts.body });
+      if (r.ok && D) D.prefs = await r.clone().json();
+      return r;
+    }
     if (p === "/api/hide" || p === "/api/unhide") {
       const r = await realFetch(p, { method: "POST", headers, body: opts.body });
       if (r.ok && D) {
@@ -100,9 +110,9 @@
   };
 
   window.BUYLIST_CLOUD = {
-    downloadCsv() {
+    downloadCsv(filter = {}) {
       if (!D) return;
-      const csv = "﻿" + L.callListCsv(L.buildCallList(D.db, D.cfg));
+      const csv = "﻿" + L.callListCsv(L.buildCallList(D.db, D.cfg, Date.now(), filter));
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
       a.download = `buy-list-${new Date().toLocaleDateString("en-CA")}.csv`;

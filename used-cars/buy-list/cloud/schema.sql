@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS hidden (
   name       TEXT,
   at         TEXT
 );
+CREATE TABLE IF NOT EXISTS prefs (    -- the current filter + saved searches, one row
+  id   INTEGER PRIMARY KEY CHECK (id = 1),
+  json TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS pin_failures (
   ip TEXT NOT NULL,
   at TEXT NOT NULL

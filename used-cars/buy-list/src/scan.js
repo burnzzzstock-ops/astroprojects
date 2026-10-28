@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { config as defaultConfig } from "./config.js";
 import { readDb, withDb } from "./store.js";
-import { applyObservations } from "./listings.js";
+import { applyObservations, registerCsvDealers } from "./listings.js";
 import { launchBrowser } from "./browser.js";
 import { fetchMarketcheck } from "./sources/marketcheck.js";
 import { fetchCarGurus } from "./sources/cargurus.js";
@@ -60,7 +60,7 @@ export async function runScan({
       try {
         const r = await fetchCarGurus(cfg, { context: await context(), log, debugDir, base: cargurusBase });
         obs.push(...r.listings);
-        scan.sources.cargurus = { ok: true, found: r.listings.length, pages: r.pages, truncated: r.truncated, method: r.method };
+        scan.sources.cargurus = { ok: true, found: r.listings.length, pages: r.pages, truncated: r.truncated, method: r.method, bands: r.bands };
       } catch (e) {
         scan.sources.cargurus = { ok: false, error: e.message.split("\n")[0] };
       }
@@ -91,6 +91,7 @@ export async function runScan({
   scan.ok = ran.some((s) => s.ok); // false when every source failed or none is set up yet
   try {
     const tally = withDb((db) => {
+      if (cfg.sources.dealerSites?.enabled) registerCsvDealers(db, readDealers(cfg.sources.dealerSites.file));
       const t = applyObservations(db, obs, cfg);
       const month = scan.startedAt.slice(0, 7);
       const mcCalls = scan.sources.marketcheck?.apiCalls || 0;

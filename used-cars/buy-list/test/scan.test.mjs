@@ -11,7 +11,7 @@ import { isolate } from "./helpers.mjs";
 
 const dir = isolate({
   sources: {
-    cargurus: { enabled: true, maxPages: 20, pageDelayMs: 0 },
+    cargurus: { enabled: true, maxPages: 20, pageDelayMs: 0, priceBands: [] },
     marketcheck: { enabled: true, apiKey: "test-key", maxPages: 2, monthlyCallCap: 450 },
     dealerSites: { enabled: true, file: path.join(process.env.TMPDIR || "/tmp", "unused.csv"), maxPagesPerDealer: 6, pageDelayMs: 0 },
   },
@@ -141,6 +141,7 @@ test("full scan: all three sources, merged, ranked", async () => {
 
   const db = readDb();
   const L = db.listings;
+  assert.equal(db.csvDealers["broken site auto"]?.phone, "(228) 555-0123", "every dealers.csv row is known, even one that failed");
   // dealer 1: 2 pages × 3 used (the new one skipped), days from the in-stock date, CSV contact info
   const d1 = Object.values(L).filter((l) => l.dealer.name === "Example Imports");
   assert.equal(d1.length, 6);
@@ -177,6 +178,33 @@ test("CarGurus fallback: when the feed is gone, read the search page and click N
   }
 });
 
+test("CarGurus price bands: one oldest-first search per band, each stopping at the 60-day line", async () => {
+  const app = express();
+  let hits = 0;
+  app.get("/", (req, res) => res.send("<html><title>Home</title><body>ok</body></html>"));
+  app.get("/Cars/searchResults.action", (req, res) => {
+    hits++;
+    const lo = Number(req.query.minPrice || 0), hi = Number(req.query.maxPrice || Infinity);
+    const inBand = CG.filter((c) => c.price >= lo && c.price <= hi); // already oldest first
+    const off = Number(req.query.offset), n = Number(req.query.maxResults);
+    res.json(off >= inBand.length ? null : inBand.slice(off, off + n));
+  });
+  const srv = await new Promise((r) => { const s = app.listen(0, "127.0.0.1", () => r(s)); });
+  const { browser, context } = await launchBrowser();
+  try {
+    const cfg = { ...config, minPrice: 18000, sources: { ...config.sources, cargurus: { ...config.sources.cargurus, priceBands: [19000, 20000] } } };
+    const r = await fetchCarGurus(cfg, { context, base: `http://127.0.0.1:${srv.address().port}`, debugDir: path.join(dir, "debug-bands") });
+    assert.deepEqual(r.bands.map((b) => b.band), ["$18000-18999", "$19000-19999", "$20000-up"]);
+    assert.ok(r.bands.every((b) => b.done && !b.capped));
+    const aged = CG.filter((c) => c.daysOnMarket >= 60).length;
+    assert.ok(r.listings.length >= aged && r.listings.length <= aged + 3 * 50, "every 60+ day car, plus at most one page past the line per band");
+    assert.ok(hits < 20, `stops each band at the 60-day line (${hits} requests)`);
+  } finally {
+    await browser.close();
+    srv.close();
+  }
+});
+
 test("CarGurus blocked: clear error + debug files saved", async () => {
   const app = express();
   app.get("/", (req, res) => res.status(403).send("<html><title>Access Denied</title></html>"));
@@ -189,6 +217,68 @@ test("CarGurus blocked: clear error + debug files saved", async () => {
       /blocked/,
     );
     assert.ok(fs.readdirSync(debugDir).some((f) => f.endsWith(".html")));
+  } finally {
+    await browser.close();
+    srv.close();
+  }
+});
+
+test("dealer pages with no data feed: 'VIN:' label cards, and VIN-less cards read by their detail link", async () => {
+  const { scrapeDealer } = await import("../src/sources/dealerSites.js");
+  const app = express();
+  // DealerCarSearch-style: <p><label>VIN:</label>&nbsp;VIN</p> (the VIN isn't in a leaf element)
+  const dcs = (i) => `<div class="car"><a href="https://www.carfax.example/record?vin=${vin("D6", i)}">Carfax</a>
+    <h3>201${i} Buick LaCrosse Premium</h3><p class="optVin"><label>VIN:</label>&nbsp;${vin("D6", i)}</p>
+    <p>Price: $6,4${i}5</p><p>Mileage: 12${i},000</p><a href="/dcs/vdp/${i}">Details</a></div>`;
+  app.get("/dcs/used", (req, res) => res.send(`<html><body>${dcs(1)}${dcs(2)}</body></html>`));
+  // Carsforsale.com-style: JSON-LD without VIN/miles, cards with title/price/mileage, VIN only on the detail page
+  const cfs = (id, title, price) => `<script type="application/ld+json">${JSON.stringify({ "@type": "Vehicle", name: title, offers: { price: 1 } })}</script>
+    <li class="vehicle-snapshot"><a href="/cfs/details/used-${title.toLowerCase().replace(/ /g, "-")}/${id}"><img alt=""></a>
+    <h4><a href="/cfs/details/used-${title.toLowerCase().replace(/ /g, "-")}/${id}">${title}</a></h4>
+    <div>Price ${price}</div><div>Mileage 9${id % 10},207</div></li>`;
+  app.get("/cfs/cars-for-sale", (req, res) => res.send(`<html><body><nav><a href="/cfs/specials-2026">2026 Specials</a></nav><ul>
+    ${cfs(130022651, "2018 Chevrolet Express 2500", "$17,760")}${cfs(130022652, "2015 Scion xB Wagon", "$11,995")}${cfs(130022653, "2014 Toyota Sienna L", "Sold")}
+    </ul></body></html>`));
+  // DealerOn-style: "Vehicle*" fields from an API, paged by <link rel="next" href="?pt=2"> with no clickable pager
+  const don = (pt) => Array.from({ length: 3 }, (_, i) => ({
+    VehicleVin: vin("D7", pt * 10 + i), VehicleYear: 2021, VehicleMake: "Subaru", VehicleModel: "Forester", VehicleName: "2021 Subaru Forester",
+    TaggingPrice: pt === 3 ? 0 : 24000 + i, VehicleInternetPrice: 0, Mileage: "22,86" + i + " mi", VehicleTaggingInventoryDate: ago(75).slice(0, 10).replace(/-/g, "/"),
+    VehicleDetailUrl: `/don/used-2021-subaru-forester-${pt}-${i}`, VehicleCondition: "Used", PriceHtml: `$19,82${i}`,
+  }));
+  app.get("/don/searchused.aspx", (req, res) => {
+    const pt = Number(req.query.pt || 1);
+    res.send(`<html><head>${pt < 3 ? `<link rel="next" href="/don/searchused.aspx?pt=${pt + 1}">` : ""}</head><body><div id="srp"></div>
+      <script>fetch('/don/api/srp/vehicles?pt=${pt}').then((r) => r.json()).then((j) => {
+        document.getElementById('srp').innerHTML = j.DisplayCards.map((c) => '<div class="card"><h3>' + c.VehicleName + '</h3><p>VIN: ' + c.VehicleVin + '</p><p>' + c.PriceHtml + '</p></div>').join('');
+      });</script></body></html>`);
+  });
+  app.get("/don/api/srp/vehicles", (req, res) => res.json({ Paging: { TotalPages: 3 }, DisplayCards: don(Number(req.query.pt)) }));
+  // an independent lot's homepage: no "used" link anywhere, just "Inventory"
+  app.get("/cfs/", (req, res) => res.send(`<html><body><nav><a href="/cfs/">Home</a> <a href="#">Inventory</a>
+    <a href="/cfs/cars-for-sale">All Inventory</a> <a href="/cfs/financing">Financing</a></nav></body></html>`));
+  const srv = await new Promise((r) => { const s = app.listen(0, "127.0.0.1", () => r(s)); });
+  const b = `http://127.0.0.1:${srv.address().port}`;
+  const { browser, context } = await launchBrowser();
+  try {
+    const a = await scrapeDealer(context, { name: "Placeholder Auto", url: `${b}/dcs/used` }, { maxPages: 1, delay: 0 });
+    assert.deepEqual(a.map((l) => l.vin).sort(), [vin("D6", 1), vin("D6", 2)]);
+    assert.equal(a.find((l) => l.vin === vin("D6", 1)).price, 6415);
+    assert.equal(a.find((l) => l.vin === vin("D6", 1)).miles, 121000);
+    assert.equal(a.find((l) => l.vin === vin("D6", 1)).url, `${b}/dcs/vdp/1`, "the dealer's own page, not Carfax");
+    const c = await scrapeDealer(context, { name: "Fictional Cars", url: `${b}/cfs/cars-for-sale` }, { maxPages: 1, delay: 0 });
+    assert.equal(c.length, 2, "two for sale; the sold one and the nav link are skipped");
+    const x = c.find((l) => l.price === 17760);
+    assert.deepEqual([x.year, x.make, x.model, x.miles, x.vin], [2018, "Chevrolet", "Express", 91207, null]);
+    assert.equal(x.sourceId, `${b}/cfs/details/used-2018-chevrolet-express-2500/130022651`);
+    const h = await scrapeDealer(context, { name: "Fictional Cars", url: `${b}/cfs/` }, { maxPages: 1, delay: 0 });
+    assert.equal(h.length, 2, "homepage → its plain 'Inventory' link");
+    const d = await scrapeDealer(context, { name: "Demo Chevrolet", url: `${b}/don/searchused.aspx` }, { maxPages: 8, delay: 0 });
+    assert.equal(d.length, 9, "3 pages × 3 via <link rel=next>");
+    const y = d.find((l) => l.vin === vin("D7", 10));
+    assert.deepEqual([y.year, y.make, y.model, y.price, y.miles], [2021, "Subaru", "Forester", 24000, 22860]);
+    assert.ok(Math.abs(y.daysListed - 75) <= 1, `in-stock date → ~75 days (date-only, so ±1 by time of day): ${y.daysListed}`);
+    assert.equal(y.url, "/don/used-2021-subaru-forester-1-0");
+    assert.equal(d.find((l) => l.vin === vin("D7", 31)).price, 19821, "feed had no price (TaggingPrice 0): taken from the car's card");
   } finally {
     await browser.close();
     srv.close();

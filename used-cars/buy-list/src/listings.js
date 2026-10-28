@@ -4,6 +4,8 @@ import { norm, daysSince, dealerKeyOf } from "./util.js";
 import { zipDistance } from "./geo.js";
 
 export { ACTIVE_DAYS, daysListed, isActive } from "./age.js";
+// Details kept for the filters (body style, drivetrain, …); any source can fill them in.
+export const DETAIL_FIELDS = ["colorGroup", "intColor", "body", "drive", "fuel", "trans", "engine", "cpo", "marketValue", "features"];
 const PRUNE_DAYS = 45;          // forget never-called cars nobody has seen in this long
 
 const hasWords = (short, long) => (` ${long} `).includes(` ${short} `);
@@ -28,6 +30,18 @@ export function resolveDealerKey(db, dealer, listingKeyValue) {
   return cands.length === 1 ? cands[0][0] : k;
 }
 
+/**
+ * Every dealers.csv row is a known dealer (name, city, state, phone) whether or not its
+ * own site could be read: a dealer whose site blocks us still gets the other sources'
+ * cars on its card, with the CSV phone when they don't give one.
+ */
+export function registerCsvDealers(db, rows) {
+  db.csvDealers ||= {};
+  for (const d of rows) {
+    if (d.name) db.csvDealers[dealerKeyOf(d, "")] = { name: d.name, city: d.city || null, state: d.state || null, phone: d.phone || null };
+  }
+}
+
 export const listingKey = (o) =>
   o.vin || `${o.source}:${o.sourceId || `${norm(o.title)}|${o.price ?? ""}|${o.miles ?? ""}`}`;
 
@@ -45,18 +59,33 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
   const ordered = [...observations].sort((a, b) => (b.source === "dealer") - (a.source === "dealer"));
   for (const o of ordered) {
     if (o.source === "dealer" && o.dealer?.name) {
-      db.csvDealers[dealerKeyOf(o.dealer, "")] = { name: o.dealer.name, city: o.dealer.city || null, state: o.dealer.state || null };
+      db.csvDealers[dealerKeyOf(o.dealer, "")] = { name: o.dealer.name, city: o.dealer.city || null, state: o.dealer.state || null, phone: o.dealer.phone || null };
     }
+  }
+  // A car read off a dealer site with no VIN (keyed by its link) and the same car with a
+  // VIN from another source are one car: same dealer card, year, make and exact miles.
+  const twinKey = (dk, x) => (x.year && x.make && x.miles ? `${dk}|${x.year}|${norm(x.make)}|${x.miles}` : null);
+  const twins = new Map();
+  for (const l of Object.values(db.listings)) {
+    const tk = twinKey(l.dealerKey, l);
+    if (tk) twins.set(tk, l);
   }
   for (const o of ordered) {
     if (o.isNew) continue;
     const dealerName = norm(o.dealer?.name);
     if (dealerName && frags.some((f) => dealerName.includes(f))) { t.excluded++; continue; }
     const key = listingKey(o);
-    const existing = db.listings[key];
+    let existing = db.listings[key];
     const dealerKey = existing && o.source !== "dealer" && !existing.dealerKey.startsWith("private:") && db.csvDealers[existing.dealerKey]
       ? existing.dealerKey
       : resolveDealerKey(db, o.dealer, key);
+    if (!existing) {
+      const twin = twins.get(twinKey(dealerKey, o));
+      if (twin && !twin.vin !== !o.vin) {
+        existing = twin;
+        if (o.vin) { delete db.listings[twin.key]; twin.key = key; db.listings[key] = twin; } // VIN wins as the key
+      }
+    }
     if (db.hiddenDealers[dealerKey]) { t.excluded++; continue; }
     const distance = o.distance ?? zipDistance(cfg.zip, o.dealer?.zip);
     if (distance != null && distance > cfg.radiusMiles + 5) { t.excluded++; continue; }
@@ -68,6 +97,7 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
       l = db.listings[key] = {
         key, vin: o.vin, year: o.year, make: o.make, model: o.model, trim: o.trim, title: o.title,
         color: o.color, stock: o.stock, photo: o.photo, miles: o.miles,
+        ...Object.fromEntries(DETAIL_FIELDS.map((f) => [f, o[f] ?? null])),
         price: o.price, firstPrice: pre ? o.prevPrice : o.price,
         priceDrops: pre ? 1 : 0, priceDropTotal: pre, lastDropAt: null, srcPrice: {},
         dealer: { ...o.dealer }, dealerKey, distance,
@@ -86,7 +116,7 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
         if (l.status === "working") l.nextCallDay = null; // a drop puts it back on today's list
         t.dropCount++;
       }
-      for (const f of ["vin", "year", "make", "model", "trim", "title", "color", "stock", "photo", "miles"]) {
+      for (const f of ["vin", "year", "make", "model", "trim", "title", "color", "stock", "photo", "miles", ...DETAIL_FIELDS]) {
         if (o[f] != null) l[f] = o[f];
       }
       if (o.price) l.price = o.price;
@@ -98,11 +128,21 @@ export function applyObservations(db, observations, cfg, now = new Date()) {
         if (v && (o.source === "dealer" || !l.dealer[k])) l.dealer[k] = v;
       }
     }
+    // On a dealers.csv dealer's card the CSV phone is the number to call, whichever source the
+    // car came from (CarGurus often shows a call-tracking number, e.g. a 417 area code for a
+    // Biloxi lot); its city/state fill in what the source left out.
+    const known = db.csvDealers[l.dealerKey];
+    if (known) {
+      if (known.phone) l.dealer.phone = known.phone;
+      for (const k of ["city", "state"]) if (known[k] && !l.dealer[k]) l.dealer[k] = known[k];
+    }
     if (o.price) l.srcPrice[o.source] = o.price;
     if (o.url) l.urls[o.source] = o.url;
     if (o.daysListed != null) l.reported[o.source] = { days: o.daysListed, at };
     l.seen[o.source] = at;
     l.lastSeenAt = at;
+    const tk = twinKey(l.dealerKey, l);
+    if (tk) twins.set(tk, l);
     t.kept++;
   }
   // Keep the file small: drop cars long gone that nobody ever called about.

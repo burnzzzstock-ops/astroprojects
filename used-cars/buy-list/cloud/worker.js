@@ -1,20 +1,20 @@
 // The Buy List web app on Cloudflare's free tier. Serves the page (public/, built
 // by build.mjs) and a small API behind a PIN:
-//   GET  /api/data     the morning scan's cars + dealers (KV, written by the GitHub
-//                      scan) and the manager's call notes (D1), in one response;
-//                      the phone does the ranking
+//   GET  /api/data     the scan's status + dealers (KV, written by the GitHub scan)
+//                      and the manager's side (D1): call notes, hidden dealers, filters
+//   GET  /api/aged     the scan's aged cars (KV, streamed as is); the phone does the ranking
+//   PUT  /api/prefs    the current filter / saved searches (same rules as the PC app)
 //   POST /api/outcome  log a call (same rules as the local app's recordOutcome)
 //   POST /api/hide | /api/unhide   hide a dealer / bring it back
 //   POST /api/scan     start a scan on GitHub (needs the optional GITHUB_TOKEN secret)
 // The big scan data is passed through as text, never parsed here, so requests stay
 // inside the free plan's CPU limit.
 import { OUTCOMES } from "../src/buyList.js";
+import { cleanFilter } from "../src/filters.js";
 import { localDay } from "../src/util.js";
 
-const json = (body, status = 200) => new Response(typeof body === "string" ? body : JSON.stringify(body), {
-  status,
-  headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
-});
+const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
+const json = (body, status = 200) => new Response(typeof body === "string" ? body : JSON.stringify(body), { status, headers: JSON_HEADERS });
 
 const MAX_WRONG_PINS = 20; // per IP per hour
 const SCAN_COOLDOWN_MIN = 30;
@@ -44,16 +44,41 @@ async function checkPin(request, env) {
   return json({ error: "pin required" }, 401);
 }
 
+const NO_PREFS = { active: {}, saved: [] };
+const parsePrefs = (row) => { try { return row ? JSON.parse(row.json) : NO_PREFS; } catch { return NO_PREFS; } };
+
 async function getData(env) {
-  const [status, aged, dealers] = await Promise.all(["status", "aged", "dealers"].map((k) => env.DATA.get(k)));
+  const [status, dealers] = await Promise.all(["status", "dealers"].map((k) => env.DATA.get(k)));
   const weekAgo = new Date(Date.now() - 8 * 86400e3).toISOString();
-  const [states, hidden, calls] = await env.DB.batch([
+  const [states, hidden, calls, prefs] = await env.DB.batch([
     env.DB.prepare("SELECT * FROM car_state"),
     env.DB.prepare("SELECT dealer_key, name FROM hidden"),
     env.DB.prepare("SELECT key, outcome, at FROM calls WHERE at > ?").bind(weekAgo),
+    env.DB.prepare("SELECT json FROM prefs WHERE id = 1"),
   ]);
-  const desk = JSON.stringify({ states: states.results, hidden: hidden.results, calls: calls.results });
-  return json(`{"status":${status || "null"},"aged":${aged || "[]"},"dealers":${dealers || "[]"},"desk":${desk}}`);
+  const desk = JSON.stringify({ states: states.results, hidden: hidden.results, calls: calls.results, prefs: parsePrefs(prefs.results[0]) });
+  return json(`{"status":${status || "null"},"dealers":${dealers || "[]"},"desk":${desk}}`);
+}
+
+// The aged cars can run to several MB at 200 miles: streamed straight from KV, never parsed.
+async function getAged(env) {
+  const body = await env.DATA.get("aged", "stream");
+  return new Response(body ?? "[]", { headers: JSON_HEADERS });
+}
+
+// Body: { active?: filter, saved?: [{ name, filter }] }, as the PC app's PUT /api/prefs.
+async function savePrefs(request, env) {
+  const b = await request.json().catch(() => ({}));
+  const p = parsePrefs(await env.DB.prepare("SELECT json FROM prefs WHERE id = 1").first());
+  if (b.active !== undefined) p.active = cleanFilter(b.active);
+  if (Array.isArray(b.saved)) {
+    p.saved = b.saved.slice(0, 50)
+      .map((s) => ({ name: String(s?.name || "").trim().slice(0, 60), filter: cleanFilter(s?.filter) }))
+      .filter((s) => s.name);
+  }
+  await env.DB.prepare("INSERT INTO prefs (id, json) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET json = excluded.json")
+    .bind(JSON.stringify(p)).run();
+  return json(p);
 }
 
 // Body: { keys, outcome, notes?, offer?, prices: { key: askingPrice } }
@@ -150,6 +175,8 @@ export default {
     if (denied) return denied;
     const route = `${request.method} ${url.pathname}`;
     if (route === "GET /api/data") return getData(env);
+    if (route === "GET /api/aged") return getAged(env);
+    if (route === "PUT /api/prefs") return savePrefs(request, env);
     if (route === "POST /api/outcome") return logOutcome(request, env);
     if (route === "POST /api/hide") return hideDealer(request, env, true);
     if (route === "POST /api/unhide") return hideDealer(request, env, false);

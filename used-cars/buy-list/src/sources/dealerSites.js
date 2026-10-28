@@ -35,11 +35,25 @@ async function domListings(page) {
     const VIN = /\b([A-HJ-NPR-Z0-9]{17})\b/;
     const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "TEXTAREA"]);
     const nodes = new Set(document.querySelectorAll("[data-vin]"));
+    // The smallest element holding both the "VIN" label and the number: a leaf
+    // ("VIN: 1FT…") or a label + text pair ("<p><label>VIN:</label> 1FT…</p>").
+    const hasVin = (n) => { const t = n.textContent || ""; return /\bVIN\b/i.test(t) && VIN.test(t); };
     for (const el of document.querySelectorAll("body *")) {
-      if (SKIP.has(el.tagName) || el.children.length) continue;
-      if (/\bVIN\b/i.test(el.textContent || "") && VIN.test(el.textContent)) nodes.add(el);
+      if (SKIP.has(el.tagName) || (el.textContent || "").replace(/\s+/g, " ").length > 120 || !hasVin(el)) continue;
+      if (![...el.children].some(hasVin)) nodes.add(el);
     }
     const vinCount = (t) => new Set(t.match(/\b[A-HJ-NPR-Z0-9]{17}\b/g) || []).size;
+    const PRICE = /\$\s?(\d{1,3}(?:,\d{3})+)/;
+    const read = (card) => {
+      const t = (card.innerText || "").replace(/\s+/g, " ");
+      return {
+        price: (t.match(PRICE) || [])[1] || null,
+        miles: (t.match(/(\d{1,3}(?:,\d{3})+|\d{4,6})\s*(?:mi\b|miles)/i) || t.match(/\bmileage:?\s*(\d{1,3}(?:,\d{3})+|\d{1,6})\b/i) || [])[1] || null,
+        title: (t.match(/\b(19[89]\d|20[0-4]\d)\s+[A-Z][\w-]+(?:\s+[\w-]+){1,4}/) || [])[0] || null,
+        stock: (t.match(/Stock\s*(?:#|No\.?|Number)?[:\s]*([A-Z0-9-]{3,})/i) || [])[1] || null,
+        sold: /\bsold\b/i.test(t) && !PRICE.test(t),
+      };
+    };
     const out = [];
     for (const el of nodes) {
       const vin = (el.getAttribute("data-vin") || (el.textContent.match(VIN) || [])[1] || "").toUpperCase();
@@ -51,21 +65,36 @@ async function domListings(page) {
         const t = node.innerText || "";
         if (vinCount(t) > 1) break;
         card = node;
-        if (/\$\s?\d{1,3}(,\d{3})+/.test(t)) break;
+        if (PRICE.test(t)) break;
       }
-      const t = (card.innerText || "").replace(/\s+/g, " ");
-      out.push({
-        vin,
-        price: (t.match(/\$\s?(\d{1,3}(?:,\d{3})+)/) || [])[1] || null,
-        miles: (t.match(/(\d{1,3}(?:,\d{3})+|\d{4,6})\s*(?:mi\b|miles)/i) || [])[1] || null,
-        title: (t.match(/\b(19[89]\d|20[0-4]\d)\s+[A-Z][\w-]+(?:\s+[\w-]+){1,4}/) || [])[0] || null,
-        stock: (t.match(/Stock\s*(?:#|No\.?|Number)?[:\s]*([A-Z0-9-]{3,})/i) || [])[1] || null,
-        url: card.querySelector("a[href]")?.href || null,
-      });
+      const links = [...card.querySelectorAll("a[href]")];
+      const url = (links.find((x) => x.hostname === location.hostname && !x.href.startsWith(location.href.split("#")[0] + "#")) || links[0])?.href || null;
+      out.push({ vin, ...read(card), url }); // the dealer's own page for the car, not a Carfax link
+    }
+    if (out.length) return out;
+    // No VINs on the page (Carsforsale.com shows title/price/mileage and keeps the VIN on
+    // the detail page): read each card by its detail link, a same-site path with a model
+    // year in it ("/details/used-2018-chevrolet-express/130022655"). The link is its id.
+    const isDetail = (a) => a.hostname === location.hostname && !a.search
+      && /(^|[^0-9])(19[89]\d|20[0-4]\d)([^0-9]|$)/.test(a.pathname) && /[a-z]{3}/i.test(a.pathname);
+    const detailHrefs = (n) => new Set([...n.querySelectorAll("a[href]")].filter(isDetail).map((a) => a.href));
+    const done = new Set();
+    for (const a of document.querySelectorAll("a[href]")) {
+      if (!isDetail(a) || done.has(a.href)) continue;
+      done.add(a.href);
+      let card = a;
+      for (let node = a.parentElement, i = 0; node && i < 9; node = node.parentElement, i++) {
+        if (detailHrefs(node).size > 1) break;
+        card = node;
+        if (PRICE.test(node.innerText || "")) break;
+      }
+      const r = read(card);
+      if (!r.title || r.sold || !(r.price || r.miles)) continue;
+      out.push({ ...r, id: a.href, url: a.href });
     }
     return out;
   });
-  return raw.map(normalizeObject);
+  return raw.filter((r) => !r.sold).map(normalizeObject);
 }
 
 async function clickMore(page) {
@@ -107,14 +136,19 @@ async function findUsedLink(page) {
   return page.evaluate(() => {
     const here = location.hostname.replace(/^www\./, "");
     const root = here.split(".").slice(-2).join(".");
-    let best = null, bestScore = 5;
+    let best = null, bestScore = 5, inventory = null;
     for (const a of document.querySelectorAll("a[href]")) {
       let u;
       try { u = new URL(a.getAttribute("href"), location.href); } catch { continue; }
       if (!/^https?:$/.test(u.protocol) || !u.hostname.replace(/^www\./, "").endsWith(root)) continue;
+      if (u.href.split("#")[0] === location.href.split("#")[0]) continue; // a menu toggle ("#"), not a page
       const t = `${a.innerText || a.textContent || ""} ${a.getAttribute("aria-label") || ""}`.toLowerCase().replace(/\s+/g, " ").trim();
       const h = (u.pathname + u.search).toLowerCase();
-      if (!/used|pre-?owned|preowned/.test(t + " " + h)) continue;
+      if (!/used|pre-?owned|preowned/.test(t + " " + h)) {
+        // Independent lots often just say "Inventory" (it's all used): second choice.
+        if (!inventory && /^(all |our |view |browse |shop |search )?(inventory|vehicles|cars for sale)$/.test(t)) inventory = u.href;
+        continue;
+      }
       let s = 0;
       if (/^(shop |view |all |search )?(used|pre-?owned)( inventory| vehicles| cars( (&|and) trucks)?)?$/.test(t)) s += 10;
       if (/used|pre-?owned/.test(t)) s += 5;
@@ -124,7 +158,7 @@ async function findUsedLink(page) {
       if (/\bnew\b|certified|cpo|specials?|sell|trade|value|financ|service|parts/.test(t)) s -= 4;
       if (s > bestScore) { best = u.href; bestScore = s; }
     }
-    return best;
+    return best || inventory;
   });
 }
 
@@ -144,12 +178,20 @@ export async function scrapeDealer(context, dealer, { maxPages = 8, delay = 1500
       const k = l.vin || l.stock || l.sourceId;
       if (k && !found.has(k)) { found.set(k, l); added++; }
     }
+    // Some feeds leave the price out and only the page shows it (DealerOn "TaggingPrice: 0"),
+    // sometimes drawn after the feed arrives: fill it from the car's card on screen.
+    const unpriced = [...found.values()].filter((l) => l.vin && l.price == null);
+    if (unpriced.length) {
+      const shown = new Map((await domListings(page)).filter((d) => d.vin && d.price).map((d) => [d.vin, d.price]));
+      for (const l of unpriced) l.price = shown.get(l.vin) ?? null;
+    }
     return added;
   };
   try {
     const resp = await page.goto(dealer.url, { waitUntil: "domcontentloaded", timeout: 60000 })
       .catch((e) => { throw new Error(friendlyNetError(e, "the site")); });
     if ((resp && resp.status() >= 400) || looksBlocked(await page.title(), await page.content())) {
+      if (debugDir) await saveDebug(page, debugDir, `dealer-${dealer.name.replace(/[^a-z0-9]+/gi, "_").slice(0, 40)}-blocked`);
       throw new Error(`site blocked or unavailable (HTTP ${resp?.status() ?? "?"})`);
     }
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
@@ -168,14 +210,26 @@ export async function scrapeDealer(context, dealer, { maxPages = 8, delay = 1500
       }
       await harvest();
     }
+    const visited = new Set([page.url()]);
     for (let p = 1; p < maxPages; p++) {
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); // infinite-scroll sites
       await settle(page);
       let added = await harvest();
-      if (!added) {
-        if (!(await clickMore(page))) break;
+      if (!added && (await clickMore(page))) {
         await settle(page);
         await sleep(delay);
+        added = await harvest();
+      }
+      if (!added) {
+        // Nothing (more) to click: follow the page's <link rel="next"> (DealerOn's "?pt=2"
+        // and other SEO paging, where the visible pager is drawn later by script).
+        const next = await page.evaluate(() => document.querySelector('link[rel="next"]')?.href || null);
+        if (!next || visited.has(next)) break;
+        visited.add(next);
+        await sleep(delay);
+        await page.goto(next, { waitUntil: "domcontentloaded", timeout: 60000 }).catch(() => {});
+        await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+        await settle(page);
         added = await harvest();
         if (!added) break;
       }

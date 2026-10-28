@@ -25,8 +25,8 @@
   .print-only { display:none; }
 
   /* Header */
-  .top { background:var(--navy); color:#fff; padding-top:env(safe-area-inset-top, 0px); }
-  .top-in { max-width:900px; margin:0 auto; padding:18px 16px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  .masthead { background:var(--navy); color:#fff; padding-top:env(safe-area-inset-top, 0px); }
+  .masthead-in { max-width:900px; margin:0 auto; padding:18px 16px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
   .brand { display:flex; align-items:center; gap:14px; min-width:0; }
   .logo { flex:none; width:48px; height:48px; border-radius:10px; background:#fff; color:var(--navy); display:grid; place-items:center; }
   .brand h1 { margin:0; font-size:28px; line-height:1.1; font-weight:700; letter-spacing:-.2px; }
@@ -135,6 +135,55 @@
   .outs button.buy:hover { background:var(--green-dark); }
   .outs button.pass { color:var(--mut); }
 
+  /* Top 10 */
+  ol.top { list-style:none; margin:0; padding:0; }
+  ol.top li { display:grid; grid-template-columns:44px minmax(0, 1fr) auto; gap:6px 14px; align-items:center; padding:16px 0; border-top:1px solid var(--line-soft); }
+  ol.top li:first-child { border-top:none; padding-top:2px; }
+  ol.top li:last-child { padding-bottom:2px; }
+  .rank { width:40px; height:40px; border-radius:50%; background:var(--navy-soft); color:var(--navy); font-weight:700; font-size:19px; display:grid; place-items:center; font-variant-numeric:tabular-nums; }
+  .top-title { font-size:19px; font-weight:700; color:var(--ink); }
+  .top-facts { font-size:16px; color:var(--mut); margin-top:2px; }
+  .top-facts b { color:var(--ink); }
+  .top-why { font-size:16px; margin-top:2px; }
+  .top-call { display:inline-flex; align-items:center; gap:8px; min-height:48px; padding:8px 16px; border-radius:10px; background:var(--green); color:#fff; font-weight:700; font-size:17px; text-decoration:none; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .top-call:hover { background:var(--green-dark); }
+  .vin { font-family:ui-monospace, Consolas, "Cascadia Mono", monospace; letter-spacing:.5px; user-select:all; color:var(--ink); }
+  .unit { scroll-margin-top:16px; }
+  .unit:target { outline:3px solid #f2b705; outline-offset:8px; border-radius:6px; }
+
+  /* Filters */
+  .card-head { display:flex; justify-content:space-between; align-items:baseline; gap:6px 14px; flex-wrap:wrap; }
+  .card-head h2 { margin:0; }
+  .saved { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 4px; }
+  .pillbtn { font:inherit; font-size:16px; font-weight:600; min-height:44px; padding:8px 16px; border-radius:99px; cursor:pointer; touch-action:manipulation; background:#fff; color:var(--navy); border:2px solid var(--line); }
+  .pillbtn:hover { border-color:var(--navy); }
+  .pillbtn.on { background:var(--navy); color:#fff; border-color:var(--navy); }
+  .pillbtn.add { border-style:dashed; color:var(--mut); }
+  .saved-item { display:inline-flex; }
+  .saved-item .pillbtn:first-child { border-radius:99px 0 0 99px; }
+  .saved-item .del { border-radius:0 99px 99px 0; border-left:none; padding:8px 12px; color:var(--mut); font-size:20px; line-height:1; }
+  .fchips { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0 0; }
+  .fchip { display:inline-flex; align-items:center; gap:2px; font-size:16px; padding:2px 2px 2px 12px; border-radius:10px; background:var(--amber-soft); border:1px solid #f0d78c; color:#4d3500; }
+  .fchip button { font:inherit; font-size:22px; line-height:1; background:none; border:none; cursor:pointer; color:#4d3500; padding:4px 10px; }
+  .fgroup h3 { font-size:19px; margin:20px 0 8px; }
+  .fgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; align-items:start; }
+  .facet { border:2px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; }
+  .facet summary { cursor:pointer; list-style:none; display:flex; gap:8px; align-items:center; min-height:32px; font-weight:700; font-size:17px; }
+  .facet summary::-webkit-details-marker { display:none; }
+  .facet summary::after { content:"Show"; margin-left:auto; font-size:15px; font-weight:600; color:var(--navy); text-decoration:underline; text-underline-offset:3px; }
+  .facet[open] summary::after { content:"Hide"; }
+  .facet[open] summary { margin-bottom:8px; }
+  .pickcount { font-size:14px; font-weight:700; background:var(--navy); color:#fff; border-radius:99px; padding:1px 9px; }
+  label.opt { display:flex; gap:10px; align-items:center; font-size:17px; font-weight:400; padding:5px 0; min-height:40px; cursor:pointer; }
+  .opt input { width:22px; height:22px; min-height:0; margin:0; padding:0; flex:none; accent-color:var(--navy); }
+  .opt .n { margin-left:auto; color:var(--mut); font-size:15px; font-variant-numeric:tabular-nums; }
+  .opt.zero { opacity:.5; }
+  label.facet.flag { font-weight:700; min-height:0; }
+  .range { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .range input { margin-top:0; }
+  .fsearch { margin:0 0 6px; }
+  .morebtn { font:inherit; font-size:16px; background:none; border:none; color:var(--navy); text-decoration:underline; text-underline-offset:3px; cursor:pointer; padding:6px 0; }
+
   /* Search + dealers */
   .search-row { display:grid; grid-template-columns:1fr 230px; gap:12px; }
   .count-line { margin-top:12px; font-size:17px; color:var(--mut); }
@@ -165,7 +214,7 @@
 
   @media (max-width: 680px) {
     body { font-size:17px; }
-    .top-in { padding:14px 16px; }
+    .masthead-in { padding:14px 16px; }
     .brand h1 { font-size:24px; }
     .logo { width:42px; height:42px; }
     .today-date { font-size:16px; }
@@ -180,12 +229,15 @@
     .unit-top { flex-direction:column; gap:6px; }
     .badges { justify-content:flex-start; max-width:none; }
     .drow { flex-direction:column; gap:4px; }
+    ol.top li { grid-template-columns:40px minmax(0, 1fr); }
+    .top-call { grid-column:2; justify-self:start; }
+    .fgrid { grid-template-columns:1fr; }
     .dstat { max-width:none; text-align:left; }
   }
 
   @media print {
     body { background:#fff; font-size:13pt; }
-    .top, .tabs, .actions, .fields, .outs, .outs-label, .whole-lot, .dealer-foot, .no-print, .modal, #toast { display:none !important; }
+    .masthead, .tabs, .actions, .fields, .outs, .outs-label, .whole-lot, .dealer-foot, .no-print, .modal, #toast { display:none !important; }
     .print-only { display:block; }
     .print-only h1 { font-size:18pt; margin:0 0 12pt; }
     main { max-width:none; padding:0; }
@@ -197,8 +249,8 @@
 </style>
 </head>
 <body>
-<header class="top">
-  <div class="top-in">
+<header class="masthead">
+  <div class="masthead-in">
     <div class="brand">
       <div class="logo" aria-hidden="true">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
@@ -233,6 +285,20 @@
     </div>
   </section>
 
+  <section class="card no-print" id="filterCard" aria-label="What we're looking for">
+    <div class="card-head"><h2>What we're looking for</h2><span class="mut" id="fCount"></span></div>
+    <p class="mut small" style="margin:4px 0 0;">Today's calls and the Top 10 follow these choices. Pick as many as you like in each category.</p>
+    <div class="saved" id="savedBar"></div>
+    <div class="fchips" id="fChips"></div>
+    <div class="actions" style="margin-top:12px;"><button class="btn" id="fToggle" data-ftoggle>Show filters</button></div>
+    <div id="fPanel" class="hidden">
+      <label style="margin-top:16px;">Search anything
+        <input id="fq" placeholder="Example: F-150 Lariat, Raptor, Gulfport, a VIN">
+      </label>
+      <div id="fGroups"></div>
+    </div>
+  </section>
+
   <nav class="tabs" aria-label="Views">
     <button data-view="today" class="on">Today's calls</button>
     <button data-view="all">Search all cars</button>
@@ -241,6 +307,10 @@
   </nav>
 
   <section id="view-today">
+    <div id="topWrap" class="hidden">
+      <div class="section-head"><h2 id="topHead">Top 10 today</h2><p class="no-print">The best cars to ask about today. Tap a car's name to jump to its notes and buttons.</p></div>
+      <div class="card"><ol class="top" id="top"></ol></div>
+    </div>
     <div id="playWrap" class="hidden">
       <div class="section-head"><h2>In negotiation</h2><p>Cars you're working a deal on. Follow up on these first.</p></div>
       <div id="play"></div>
@@ -412,8 +482,11 @@ async function loadStatus() {
 
   let note = "";
   if (s.marketcheck.hasKey) note += `<p class="mut small" style="margin:8px 0 0;">Marketcheck free plan: ${num(s.marketcheck.used)} of ${num(s.marketcheck.cap)} lookups used this month.</p>`;
-  const failedSites = last?.sources?.dealerSites?.failed || [];
-  if (failedSites.length) note += `<div class="notice">${plural(failedSites.length, "dealer website")} couldn't be read on the last check. The Dealers tab shows which ones.</div>`;
+  const ds = last?.sources?.dealerSites, failedSites = ds?.failed || [];
+  if (failedSites.length) {
+    const blocked = failedSites.filter(x => /HTTP 403/.test(x.error)).length;
+    note += `<p class="mut small" style="margin:8px 0 0;">${num(failedSites.length)} of ${num(ds.dealerCount)} dealer websites couldn't be read${blocked ? ` (${num(blocked)} of them block automatic checks)` : ""}. <button class="linkbtn" onclick="openTab('dealers')">See which ones</button></p>`;
+  }
   if (last && !last.ok && Object.values(last.sources || {}).every(x => x.skipped)) {
     note += `<div class="notice">No car source is set up yet. Add dealer websites to <code>dealers.csv</code>, and (optional) a free Marketcheck key.</div>`;
   }
@@ -455,22 +528,32 @@ const outLabel = k => OUT_LABEL[k] || STATUS?.outcomes?.[k] || k;
 // The ranking's reasons, as a plain sentence. Days listed and distance are already on the facts line.
 function whySentence(why) {
   const parts = (why || []).filter(w => !/days listed$/.test(w) && !/ mi away$/.test(w) && !/since your last call$/.test(w))
-    .map(w => w.replace(/^CarGurus: (.*)$/, "CarGurus rates it “$1”"));
+    .map(w => w.replace(/^CarGurus: (.*)$/, "CarGurus rates it “$1”")
+      .replace(/^★ (.*)$/, "$1 (a store priority)")
+      .replace(/^under (\d+)k mi$/, (m, k) => `under ${num(k * 1000)} miles`));
   if (!parts.length) return "";
   const s = parts.join(", ");
   return s[0].toUpperCase() + s.slice(1) + ".";
 }
 
+const carTitle = u => [u.year, u.make, u.model, u.trim].filter(Boolean).join(" ") || u.title || "Vehicle";
+// The store's priorities (Fords, then low miles) rank first, then the buy score.
+function priorityLevel(u) {
+  if ((u.tier || 0) >= 2 || u.score >= 60) return "High";
+  if ((u.tier || 0) >= 1 || u.score >= 40) return "Medium";
+  return "";
+}
+
 function unitBlock(u, { showDealer = false, flush = false } = {}) {
   const i = keyIndex(u.key);
-  const title = [u.year, u.make, u.model, u.trim].filter(Boolean).join(" ") || u.title || "Vehicle";
+  const title = carTitle(u);
   const badges = [];
   if (u.status === "negotiating") badges.push(`<span class="badge neg">Negotiating</span>`);
   else if (u.status === "bought") badges.push(`<span class="badge bought">Bought</span>`);
   else if (u.status === "passed") badges.push(`<span class="badge passed">Not interested</span>`);
   if (u.status !== "bought" && u.status !== "passed") {
-    if (u.score >= 60) badges.push(`<span class="badge high" title="Buy score ${u.score}">High priority</span>`);
-    else if (u.score >= 40) badges.push(`<span class="badge med" title="Buy score ${u.score}">Medium priority</span>`);
+    const level = priorityLevel(u);
+    if (level) badges.push(`<span class="badge ${level === "High" ? "high" : "med"}" title="Buy score ${u.score}">${level} priority</span>`);
   }
   const why = whySentence(u.why);
   const drop = u.priceAtLastCall && u.price && u.price < u.priceAtLastCall
@@ -494,7 +577,7 @@ function unitBlock(u, { showDealer = false, flush = false } = {}) {
     return `<div class="seller">${esc(u.dealer?.name || "Private seller")}${u.dealer?.city ? ", " + esc(u.dealer.city) : ""}${tel ? ` · <a href="${tel}">${esc(prettyPhone(u.dealer.phone))}</a>` : ""}</div>`;
   })() : "";
   return `
-    <div class="unit${flush ? " flush" : ""}">
+    <div class="unit${flush ? " flush" : ""}" id="unit-${i}">
       ${u.rideAlong ? `<div class="ride">Also on this lot</div>` : ""}
       <div class="unit-top"><h4 class="unit-title">${esc(title)}</h4>${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}</div>
       ${dealerLine}
@@ -510,6 +593,24 @@ function unitBlock(u, { showDealer = false, flush = false } = {}) {
       ${meta ? `<div class="meta">${meta}</div>` : ""}
       ${outs}
     </div>`;
+}
+
+// One line per car in the Top 10; its name jumps to the full entry (notes, outcome buttons) below.
+function topRow(u, rank) {
+  const i = KEYS.indexOf(u.key);
+  const tel = telHref(u.dealer?.phone);
+  const dealer = [u.dealer?.name || "Private seller", u.dealer?.city].filter(Boolean).join(", ");
+  const why = whySentence(u.why);
+  return `<li>
+    <span class="rank">${rank}</span>
+    <div style="min-width:0;">
+      ${i >= 0 ? `<a class="top-title" href="#unit-${i}">${esc(carTitle(u))}</a>` : `<span class="top-title">${esc(carTitle(u))}</span>`}
+      <div class="top-facts"><b>${money(u.price)}</b> · ${num(u.miles)} miles · on the market <b>${plural(u.days, "day")}</b> · ${esc(dealer)}${u.distance != null ? ` · ${plural(Math.round(u.distance), "mile")} away` : ""}</div>
+      ${u.vin ? `<div class="top-facts">VIN <span class="vin">${esc(u.vin)}</span>${u.stock ? ` · Stock # ${esc(u.stock)}` : ""}</div>` : ""}
+      ${why ? `<div class="top-why">${esc(why)}</div>` : ""}
+    </div>
+    ${tel ? `<a class="top-call" href="${tel}">${ICON_PHONE}<span>Call ${esc(prettyPhone(u.dealer.phone))}</span></a>` : "<span></span>"}
+  </li>`;
 }
 
 function renderToday() {
@@ -533,13 +634,17 @@ function renderToday() {
         ${d.units.map(u => unitBlock(u)).join("")}
         ${String(d.dealerKey).startsWith("private:") ? "" : `<div class="dealer-foot"><button class="linkbtn danger" onclick="hideDealer(${di})">Hide this dealer</button></div>`}
       </article>`).join("");
+  const top = t.top || []; // after the cards, so each row can link to its car's entry
+  document.getElementById("topWrap").classList.toggle("hidden", !top.length);
+  document.getElementById("topHead").textContent = `Top ${top.length} today${noFilter(FILTER) ? "" : ", using your filters"}`;
+  document.getElementById("top").innerHTML = top.map((u, r) => topRow(u, r + 1)).join("");
   const foot = [];
   if (t.dueTotal > units) foot.push(`${plural(t.dueTotal - units, "more car")} due after today's top picks (see Search all cars)`);
   if (t.laterCount) foot.push(`${plural(t.laterCount, "car")} scheduled for a later day`);
   document.getElementById("todayFoot").textContent = foot.join(" · ");
 }
 
-async function loadToday() { TODAY = await api("/today"); renderToday(); }
+async function loadToday() { TODAY = await api("/today" + fq("?")); renderToday(); }
 
 // ── Actions ──
 async function logKeys(keys, outcome, notes = "", offer = "") {
@@ -585,9 +690,178 @@ async function pollScan() {
   if (s?.lastScan) toast(`Done: ${plural(s.lastScan.kept, "car")} checked, ${num(s.lastScan.newCount)} new`);
 }
 function downloadCsv() {
-  if (window.BUYLIST_CLOUD) return window.BUYLIST_CLOUD.downloadCsv(); // web version builds it in the browser
-  window.open(`/api/today.csv${PIN ? "?pin=" + encodeURIComponent(PIN) : ""}`, "_blank");
+  if (window.BUYLIST_CLOUD) return window.BUYLIST_CLOUD.downloadCsv(FILTER); // web version builds it in the browser
+  window.open(`/api/today.csv?${PIN ? "pin=" + encodeURIComponent(PIN) : ""}${fq("&")}`, "_blank");
 }
+
+// ── Filters: dozens of categories, most pick-any-number (src/filters.js) ──
+let FILTER = {};                         // the current filter, saved with the prefs
+let PREFS = { active: {}, saved: [] };
+let FSUM = null;                         // last /api/filters: categories, counts, totals
+const FOPEN = new Set(), FSEARCH = {}, FALL = {}; // open categories, option search text, "show all"
+const noFilter = f => !Object.keys(f || {}).length;
+const fq = sep => noFilter(FILTER) ? "" : `${sep}f=${encodeURIComponent(JSON.stringify(FILTER))}`;
+const sortedF = f => JSON.stringify(Object.keys(f || {}).sort().map(k => [k, Array.isArray(f[k]) && typeof f[k][0] === "string" ? [...f[k]].sort() : f[k]]));
+const defOf = k => (FSUM?.defs || []).find(d => d.key === k);
+const lc = s => String(s).toLowerCase();
+const shortLabel = d => d.label.replace(/ \(.*\)$/, "");
+
+function fmtRange(key, [lo, hi]) {
+  const f = { price: money, vsMarket: n => (n < 0 ? "−$" : "+$") + Math.abs(n).toLocaleString("en-US"), miles: n => num(n) + " miles",
+    distance: n => num(n) + " miles", days: n => n + " days" }[key] || String;
+  return lo != null && hi != null ? `${f(lo)} to ${f(hi)}` : lo != null ? `${f(lo)} or more` : `up to ${f(hi)}`;
+}
+
+function renderSaved() {
+  const astro = noFilter(FILTER);
+  document.getElementById("savedBar").innerHTML =
+    `<button class="pillbtn ${astro ? "on" : ""}" data-astro>★ Astro default</button>`
+    + PREFS.saved.map((s, i) => `<span class="saved-item"><button class="pillbtn ${sortedF(s.filter) === sortedF(FILTER) && !astro ? "on" : ""}" data-saved="${i}">${esc(s.name)}</button><button class="pillbtn del" data-delsaved="${i}" title="Delete this saved search" aria-label="Delete ${esc(s.name)}">×</button></span>`).join("")
+    + (astro ? "" : `<button class="pillbtn add" data-save>+ Save this search</button>`);
+}
+
+function renderChips() {
+  const chips = [];
+  for (const [k, v] of Object.entries(FILTER)) {
+    const d = defOf(k);
+    if (k === "q") chips.push([`Search: “${v}”`, k, ""]);
+    else if (!d) continue;
+    else if (d.kind === "range") chips.push([`${shortLabel(d)}: ${fmtRange(k, v)}`, k, ""]);
+    else if (d.kind === "flag") chips.push([d.label, k, ""]);
+    else for (const x of v) chips.push([`${shortLabel(d)}: ${x}`, k, x]);
+  }
+  document.getElementById("fChips").innerHTML = chips.map(([label, k, x]) =>
+    `<span class="fchip">${esc(label)}<button data-rm="${esc(k)}" data-v="${esc(x)}" title="Remove" aria-label="Remove ${esc(label)}">×</button></span>`).join("")
+    + (chips.length > 1 ? `<button class="linkbtn" data-astro>Clear all</button>` : "");
+  const n = Object.keys(FILTER).length, open = !document.getElementById("fPanel").classList.contains("hidden");
+  document.getElementById("fToggle").textContent = `${open ? "Hide" : "Show"} filters${n ? ` (${n} in use)` : ""}`;
+  document.getElementById("fCount").textContent = FSUM
+    ? (noFilter(FILTER) ? `${plural(FSUM.pool, "aged car")} within ${STATUS?.filters?.radiusMiles ?? ""} miles` : `${num(FSUM.total)} of ${plural(FSUM.pool, "aged car")} match`) : "";
+}
+
+function optionList(d) {
+  const c = FSUM?.facets?.[d.key] || {};
+  const sel = (FILTER[d.key] || []).map(lc), term = lc(FSEARCH[d.key] || "");
+  const opts = (c.opts || []).filter(o => !term || lc(o.v).includes(term));
+  const all = FALL[d.key] || term;
+  const show = all ? opts.slice(0, 400) : [...opts.slice(0, 8), ...opts.slice(8).filter(o => sel.includes(lc(o.v)))];
+  return show.map(o => `<label class="opt${o.n ? "" : " zero"}"><input type="checkbox" data-k="${d.key}" data-v="${esc(o.v)}" ${sel.includes(lc(o.v)) ? "checked" : ""}><span>${esc(o.v)}</span><span class="n">${num(o.n)}</span></label>`).join("")
+    + (opts.length > show.length ? `<button class="morebtn" data-more="${d.key}">Show all ${num(opts.length)}</button>` : "")
+    + (!opts.length ? `<div class="mut">None</div>` : "");
+}
+
+function facetBlock(d) {
+  const c = FSUM?.facets?.[d.key] || {}, sel = FILTER[d.key];
+  if (d.kind === "flag") {
+    return `<label class="facet flag opt"><input type="checkbox" data-flag="${d.key}" ${sel ? "checked" : ""}><span>${esc(d.label)}</span><span class="n">${num(c.n ?? 0)}</span></label>`;
+  }
+  const picked = d.kind === "range" ? (sel ? "set" : "") : sel?.length || "";
+  let body;
+  if (d.kind === "range") {
+    const [lo, hi] = sel || [];
+    const ph = v => (v == null ? "" : Math.round(v).toLocaleString("en-US"));
+    body = `<div class="range"><label>Lowest<input inputmode="numeric" data-range="${d.key}" data-i="0" placeholder="${ph(c.min)}" value="${lo ?? ""}"></label><label>Highest<input inputmode="numeric" data-range="${d.key}" data-i="1" placeholder="${ph(c.max)}" value="${hi ?? ""}"></label></div>`;
+  } else {
+    body = `${(c.opts || []).length > 8 ? `<input class="fsearch" data-fsearch="${d.key}" placeholder="Find…" aria-label="Find a ${esc(shortLabel(d))}" value="${esc(FSEARCH[d.key] || "")}">` : ""}<div id="fo-${d.key}">${optionList(d)}</div>`;
+  }
+  return `<details class="facet" data-facet="${d.key}" ${FOPEN.has(d.key) ? "open" : ""}><summary><span>${esc(d.label)}</span>${picked ? `<span class="pickcount">${picked}</span>` : ""}</summary>${body}</details>`;
+}
+
+function renderPanel() {
+  if (document.getElementById("fPanel").classList.contains("hidden") || !FSUM) return;
+  const groups = [];
+  for (const d of FSUM.defs) {
+    let g = groups.find(x => x.name === d.group);
+    if (!g) groups.push(g = { name: d.group, defs: [] });
+    g.defs.push(d);
+  }
+  document.getElementById("fGroups").innerHTML = groups.map(g =>
+    `<div class="fgroup"><h3>${esc(g.name)}</h3><div class="fgrid">${g.defs.map(facetBlock).join("")}</div></div>`).join("");
+}
+
+function renderFilters() { renderSaved(); renderChips(); renderPanel(); }
+
+async function loadFilters() {
+  try { FSUM = await api("/filters" + fq("?")); } catch (e) { toast(e.message); }
+  renderFilters();
+}
+
+// After any change: show it at once, then (debounced) save it and reload the counts and the list.
+let filterTimer = null;
+function filterChanged() {
+  for (const [k, v] of Object.entries(FILTER)) if (v == null || v === "" || (Array.isArray(v) && !v.some(x => x != null && x !== ""))) delete FILTER[k];
+  renderSaved(); renderChips();
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(async () => {
+    api("/prefs", { method: "PUT", body: JSON.stringify({ active: FILTER }) }).catch(() => {});
+    await loadFilters();
+    if (!document.getElementById("view-today").classList.contains("hidden")) loadToday();
+    if (!document.getElementById("view-all").classList.contains("hidden")) browse();
+  }, 350);
+}
+function setFilter(f) { FILTER = JSON.parse(JSON.stringify(f || {})); document.getElementById("fq").value = FILTER.q || ""; filterChanged(); }
+async function savePrefsList() {
+  try { PREFS = await api("/prefs", { method: "PUT", body: JSON.stringify({ saved: PREFS.saved }) }); } catch (e) { toast(e.message); }
+  renderSaved();
+}
+
+(() => {
+  const card = document.getElementById("filterCard");
+  card.addEventListener("change", e => {
+    const t = e.target;
+    if (t.dataset.k) {
+      const list = FILTER[t.dataset.k] || [];
+      FILTER[t.dataset.k] = t.checked ? [...list, t.dataset.v] : list.filter(x => lc(x) !== lc(t.dataset.v));
+      filterChanged();
+    } else if (t.dataset.flag) {
+      if (t.checked) FILTER[t.dataset.flag] = true; else delete FILTER[t.dataset.flag];
+      filterChanged();
+    } else if (t.dataset.range) {
+      const r = FILTER[t.dataset.range] || [null, null];
+      const n = t.value.replace(/[^0-9.-]/g, "");
+      r[Number(t.dataset.i)] = n === "" || isNaN(Number(n)) ? null : Number(n);
+      FILTER[t.dataset.range] = r;
+      filterChanged();
+    }
+  });
+  card.addEventListener("input", e => {
+    const t = e.target;
+    if (t.dataset.fsearch) { FSEARCH[t.dataset.fsearch] = t.value; const d = defOf(t.dataset.fsearch); if (d) document.getElementById("fo-" + d.key).innerHTML = optionList(d); }
+    if (t.id === "fq") { FILTER.q = t.value.trim(); filterChanged(); }
+  });
+  card.addEventListener("toggle", e => {
+    const k = e.target.dataset?.facet;
+    if (k) { if (e.target.open) FOPEN.add(k); else FOPEN.delete(k); }
+  }, true);
+  card.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const ds = b.dataset;
+    if ("ftoggle" in ds) {
+      document.getElementById("fPanel").classList.toggle("hidden");
+      renderChips(); renderPanel();
+    } else if (ds.more) {
+      FALL[ds.more] = true;
+      const d = defOf(ds.more); if (d) document.getElementById("fo-" + d.key).innerHTML = optionList(d);
+    } else if (ds.rm) {
+      const d = defOf(ds.rm);
+      if (d && (d.kind === "multi" || d.kind === "all") && ds.v) FILTER[ds.rm] = (FILTER[ds.rm] || []).filter(x => x !== ds.v);
+      else delete FILTER[ds.rm];
+      if (ds.rm === "q") document.getElementById("fq").value = "";
+      filterChanged();
+    } else if ("astro" in ds) {
+      setFilter({});
+    } else if (ds.saved) {
+      setFilter(PREFS.saved[Number(ds.saved)]?.filter);
+    } else if (ds.delsaved) {
+      const s = PREFS.saved[Number(ds.delsaved)];
+      if (s && confirm(`Delete the saved search “${s.name}”?`)) { PREFS.saved.splice(Number(ds.delsaved), 1); savePrefsList(); }
+    } else if ("save" in ds) {
+      const name = (prompt("Name this search (for example: Trucks under $40,000)") || "").trim();
+      if (name) { PREFS.saved = [...PREFS.saved.filter(s => s.name !== name), { name, filter: JSON.parse(JSON.stringify(FILTER)) }]; savePrefsList(); }
+    }
+  });
+})();
 
 // ── Search / dealers / hidden ──
 let browseTimer = null;
@@ -596,9 +870,10 @@ async function browse() {
   const q = document.getElementById("q").value.trim();
   const sort = document.getElementById("sort").value;
   try {
-    const r = await api(`/listings?q=${encodeURIComponent(q)}&sort=${sort}`);
+    const r = await api(`/listings?q=${encodeURIComponent(q)}&sort=${sort}${fq("&")}`);
     KEYS.length = 0; // only the visible view's buttons are live; switching tabs re-renders
-    document.getElementById("allCount").textContent = r.total > r.rows.length ? `Showing the first ${r.rows.length} of ${num(r.total)} aged cars` : plural(r.total, "aged car");
+    const what = noFilter(FILTER) ? "" : " matching your filters";
+    document.getElementById("allCount").textContent = r.total > r.rows.length ? `Showing the first ${r.rows.length} of ${num(r.total)} aged cars${what}` : plural(r.total, "aged car") + what;
     document.getElementById("all").innerHTML = r.rows.length
       ? r.rows.map(u => `<div class="card">${unitBlock(u, { showDealer: true, flush: true })}</div>`).join("")
       : `<div class="card empty">No aged cars match that search.</div>`;
@@ -640,6 +915,8 @@ async function loadHidden() {
     : `<p class="mut">No hidden dealers.</p>`;
 }
 
+function openTab(view) { document.querySelector(`.tabs button[data-view="${view}"]`)?.click(); }
+
 for (const b of document.querySelectorAll(".tabs button")) {
   b.onclick = () => {
     for (const x of document.querySelectorAll(".tabs button")) { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); }
@@ -654,8 +931,12 @@ for (const b of document.querySelectorAll(".tabs button")) {
 document.getElementById("todayDate").textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 (async () => {
   try {
+    PREFS = await api("/prefs").catch(() => PREFS);
+    FILTER = PREFS.active || {};
+    document.getElementById("fq").value = FILTER.q || "";
     const s = await loadStatus();
     await loadToday();
+    loadFilters();
     if (s.running) pollScan();
   } catch (e) { document.getElementById("scanLine").textContent = e.message; }
 })();

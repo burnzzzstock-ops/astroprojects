@@ -8,25 +8,39 @@ import { toNumber, daysSince } from "./util.js";
 const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/i;
 
 const K = {
-  vin: ["vin", "vehicleIdentificationNumber", "vinNumber", "vin_number"],
-  year: ["year", "modelYear", "carYear", "vehicleModelDate", "model_year", "yearNumber"],
-  make: ["make", "makeName", "brand", "manufacturer", "make_name"],
-  model: ["model", "modelName", "model_name"],
-  trim: ["trim", "trimName", "trim_name", "vehicleConfiguration", "series"],
-  title: ["listingTitle", "title", "heading", "vehicleTitle", "name"],
+  vin: ["vin", "vehicleIdentificationNumber", "vinNumber", "vin_number", "vehicleVin", "vehicle_vin"],
+  year: ["year", "modelYear", "carYear", "vehicleModelDate", "model_year", "yearNumber", "vehicleYear", "vehicle_year"],
+  make: ["make", "makeName", "brand", "manufacturer", "make_name", "vehicleMake", "vehicle_make"],
+  model: ["model", "modelName", "model_name", "vehicleModel", "vehicle_model"],
+  trim: ["trim", "trimName", "trim_name", "vehicleConfiguration", "series", "vehicleTrim", "vehicle_trim"],
+  title: ["listingTitle", "title", "heading", "vehicleTitle", "vehicleName", "vehicle_caption", "name"],
   price: ["price", "listPrice", "askingPrice", "internetPrice", "salePrice", "sellingPrice", "finalPrice",
-    "displayPrice", "priceValue", "retailPrice", "currentPrice", "expectedPrice"],
+    "displayPrice", "priceValue", "retailPrice", "currentPrice", "taggingPrice", "vehicle_sale_price", "vehicle_price"],
+  // (not "expectedPrice": on CarGurus that's their market-value estimate, not the asking price)
   prevPrice: ["previousPrice", "originalPrice", "oldPrice", "ref_price", "wasPrice", "priceBeforeDrop", "lastPrice"],
-  miles: ["mileage", "miles", "odometer", "mileageFromOdometer", "odometerReading", "mileageValue"],
+  miles: ["mileage", "miles", "odometer", "mileageFromOdometer", "odometerReading", "mileageValue", "vehicleMileage", "vehicle_miles"],
   days: ["daysOnMarket", "daysOnLot", "daysInStock", "daysListed", "dom", "daysOnCarGurus", "ageInDays",
     "daysInInventory", "days_on_market"],
   since: ["inStockDate", "dateInStock", "stockDate", "listedDate", "firstListedDate", "datePosted", "listingDate",
-    "postedDate", "dateListed", "first_seen_at_date", "dateFirstListed"],
-  url: ["vdpUrl", "vdp_url", "listingUrl", "detailUrl", "detailsUrl", "vehicleUrl", "url", "link", "href"],
+    "postedDate", "dateListed", "first_seen_at_date", "dateFirstListed", "inventoryDate", "vehicleTaggingInventoryDate"],
+  url: ["vdpUrl", "vdp_url", "listingUrl", "detailUrl", "detailsUrl", "vehicleUrl", "vehicleDetailUrl", "url", "link", "href"],
   photo: ["primaryPhotoUrl", "imageUrl", "mainPhotoUrl", "thumbnailUrl", "pictureUrl", "photoUrl", "image", "photo",
-    "thumbnail", "images", "photos", "photo_links"],
-  color: ["exteriorColor", "exterior_color", "extColor", "colorName", "color"],
-  stock: ["stockNumber", "stockNo", "stock_no", "stockNum", "stock", "sku"],
+    "thumbnail", "images", "photos", "photo_links", "originalPictureData", "pictureData"],
+  color: ["exteriorColor", "exterior_color", "extColor", "colorName", "exteriorColorName", "localizedExteriorColor",
+    "exteriorColorLabel", "color"],
+  // For the filters: CarGurus names first, then DealerOn (Vehicle*), space.auto, AutoCorner (vehicle_*), schema.org.
+  colorGroup: ["normalizedExteriorColor", "genericColor", "vehicleGenericColor"],
+  intColor: ["localizedInteriorColor", "interiorColor", "interior_color", "intColor", "interiorColorLabel"],
+  body: ["bodyTypeName", "bodyType", "bodyStyle", "vehicleBodyStyle", "vehicle_body", "body"],
+  drive: ["localizedDriveTrain", "driveTrain", "drivetrain", "driveline", "vehicleDriveTrain", "vehicle_drivetrain",
+    "driveWheelConfiguration", "driveType"],
+  fuel: ["localizedFuelType", "fuelType", "fuel", "vehicleFuelType", "vehicle_fuel"],
+  trans: ["localizedTransmission", "transmission", "vehicleTransmission", "vehicle_transmission", "transmissionType"],
+  engine: ["localizedEngineDisplayName", "engine", "vehicleEngine", "vehicle_engine", "engineDescription"],
+  cpo: ["isCPO", "isOEMCPO", "certified", "isCertified", "vehicleCpo"],
+  marketValue: ["expectedPrice"], // CarGurus' market-value estimate
+  features: ["options", "features"],
+  stock: ["stockNumber", "stockNo", "stock_no", "stockNum", "stock", "sku", "vehicleStockNumber", "vehicle_stocknum"],
   condition: ["condition", "itemCondition", "vehicleCondition", "newOrUsed", "stockType", "inventoryType"],
   isNew: ["isNew", "newCar", "isNewCar"],
   distance: ["distance", "dist", "distanceInMiles"],
@@ -70,6 +84,17 @@ function urlOf(v) {
   const s = String(v).trim();
   return /^(https?:)?\/\//i.test(s) || s.startsWith("/") ? s : null;
 }
+// DealerOn sites can leave TaggingPrice at 0 and keep the price only in a base64
+// "VehiclePriceLibrary" ("MSRP:32895.0;Selling Price:32895.0;…").
+function priceLibrary(v) {
+  if (typeof v !== "string" || !v) return null;
+  const s = Buffer.from(v, "base64").toString("utf8");
+  return toNumber((s.match(/(?:^|;)Selling Price:([\d.]+)/i) || [])[1]);
+}
+// CarGurus sends sellerCity as "Gulfport, MS": keep just the city.
+function cityOnly(v) {
+  return v ? v.replace(/,\s*[A-Z]{2}(\s+\d{5}(-\d{4})?)?$/i, "").trim() || null : null;
+}
 function yearOf(v) {
   const m = String(v ?? "").match(/\b(19[89]\d|20[0-4]\d)\b/);
   return m ? Number(m[1]) : null;
@@ -112,17 +137,29 @@ function sellerOf(m) {
   // A nested dealer object's plain "name" is the dealer name; the listing's own "name" is the car.
   const name = first(K.sellerName) || first(["name"], true);
   const typeRaw = (first(K.sellerType) || "").toLowerCase();
+  const franchise = m.get("isfranchisedealer"); // CarGurus: true/false
   return {
     name,
     phone: first(K.sellerPhone),
     street: first(K.sellerStreet, true),
-    city: first(K.sellerCity),
+    city: cityOnly(first(K.sellerCity)),
     state: first(K.sellerState),
     zip: first(K.sellerZip),
     website: first(K.sellerWebsite, true),
     type: /private|fsbo|owner|individual/.test(typeRaw) ? "private"
-      : /franchise/.test(typeRaw) ? "franchise" : /independent/.test(typeRaw) ? "independent" : null,
+      : /franchise/.test(typeRaw) || franchise === true ? "franchise"
+      : /independent/.test(typeRaw) || franchise === false ? "independent" : null,
   };
+}
+
+// Short descriptive text only (a body style, a fuel type), never a page of HTML.
+const short = (v) => { const s = text(v); return s && s.length <= 60 ? s : null; };
+const yes = (v) => v === true || /^(true|yes|1)$/i.test(String(v ?? ""));
+// Feature names ("Leather Seats", "Sunroof/Moonroof"…), deduped, capped.
+function featureList(v) {
+  if (!Array.isArray(v)) return null;
+  const out = [...new Set(v.map((x) => text(x)).filter((s) => s && s.length <= 60))].slice(0, 40);
+  return out.length ? out : null;
 }
 
 /** Normalize one listing-like object into the common observation shape. */
@@ -153,13 +190,23 @@ export function normalizeObject(obj) {
     vin: vinRaw && VIN_RE.test(vinRaw) ? vinRaw.toUpperCase() : null,
     year, make, model, trim,
     title: title || [year, make, model, trim].filter(Boolean).join(" ") || null,
-    price: toNumber(pick(m, K.price)) ?? toNumber(offers?.price),
+    price: toNumber(pick(m, K.price)) ?? toNumber(offers?.price) ?? priceLibrary(m.get("vehiclepricelibrary")),
     prevPrice: toNumber(pick(m, K.prevPrice)),
     miles: toNumber(pick(m, K.miles)),
     daysListed: days ?? (sinceDays != null ? Math.round(sinceDays) : null),
     url: urlOf(pick(m, K.url)),
     photo,
-    color: text(pick(m, K.color)),
+    color: short(pick(m, K.color)),
+    colorGroup: short(pick(m, K.colorGroup)),
+    intColor: short(pick(m, K.intColor)),
+    body: short(pick(m, K.body)),
+    drive: short(pick(m, K.drive)),
+    fuel: short(pick(m, K.fuel)),
+    trans: short(pick(m, K.trans)),
+    engine: short(pick(m, K.engine)),
+    cpo: yes(pick(m, K.cpo)) || null,
+    marketValue: toNumber(pick(m, K.marketValue)),
+    features: featureList(pick(m, K.features)),
     stock: text(pick(m, K.stock)),
     isNew: isNewFlag === true || /^new$|newcondition/.test(condition),
     distance: toNumber(pick(m, K.distance)),

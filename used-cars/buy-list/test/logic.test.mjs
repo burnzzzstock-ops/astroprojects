@@ -28,6 +28,84 @@ test("merge: one record per VIN across sources; excluded sellers and far dealers
   assert.equal(l.urls.dealer, "https://dealer.example/0");
 });
 
+test("a dealer-site car with no VIN and the same car with a VIN elsewhere are one record", () => {
+  const db = freshDb();
+  const site = (over = {}) => obs(0, { source: "dealer", vin: null, sourceId: "https://dealer.example/details/used-2016-ford-f-150/77", stock: null, daysListed: null, ...over });
+  applyObservations(db, [site()], config);
+  assert.equal(Object.keys(db.listings).length, 1);
+  applyObservations(db, [obs(0), site()], config); // CarGurus brings the VIN; the dealer site still has none
+  assert.deepEqual(Object.keys(db.listings), [obs(0).vin], "re-keyed to the VIN, no duplicate");
+  const l = db.listings[obs(0).vin];
+  assert.equal(l.key, obs(0).vin);
+  assert.deepEqual(Object.keys(l.seen).sort(), ["cargurus", "dealer"]);
+  // a different car at the same lot (other miles) stays separate
+  applyObservations(db, [site({ miles: 61234, sourceId: "https://dealer.example/details/used-2016-ford-f-150/78" })], config);
+  assert.equal(Object.keys(db.listings).length, 2);
+});
+
+test("a dealers.csv dealer whose site can't be read still gets other sources' cars, with its CSV phone", async () => {
+  const { registerCsvDealers } = await import("../src/listings.js");
+  const db = freshDb();
+  registerCsvDealers(db, [{ name: "Example Motors of Gulfport", phone: "(228) 555-0130", city: "Gulfport", state: "MS" }]);
+  applyObservations(db, [
+    obs(0, { dealer: { name: "Example Motors", phone: null, city: "Gulfport", state: "MS", zip: "39501" }, dealRating: "NA" }),
+    obs(1, { dealer: { name: "Example Motors", phone: "(417) 555-0199", state: "MS", zip: "39501" } }), // a call-tracking number
+  ], config);
+  const l = db.listings[obs(0).vin];
+  assert.equal(l.dealerKey, "example motors of gulfport", "on the dealers.csv card");
+  assert.equal(l.dealer.phone, "(228) 555-0130", "CSV phone when CarGurus has none");
+  assert.equal(db.listings[obs(1).vin].dealer.phone, "(228) 555-0130", "CSV phone wins over the source's");
+  assert.equal(db.listings[obs(1).vin].dealer.city, "Gulfport", "CSV city fills in");
+  assert.ok(!B.scoreListing(l, { days: 120 }).why.some((w) => /CarGurus/.test(w)), "no 'CarGurus: Na' chip");
+});
+
+test("top 10: the best due cars as one ranked list; ties go to the longest listed, then the closest", () => {
+  const db = freshDb();
+  const lot = { name: "Example Motors", phone: "(228) 555-0101", city: "Gulfport", state: "MS", zip: "39501" };
+  applyObservations(db, [
+    ...Array.from({ length: 12 }, (_, i) => obs(i, { dealer: lot, daysListed: 200 + i, distance: 1 })),
+    obs(20, { dealer: lot, daysListed: 300, distance: 2 }), obs(21, { dealer: lot, daysListed: 300, distance: 1 }),
+  ], config);
+  const t = B.buildCallList(db, { ...config, topListSize: 10 });
+  assert.equal(t.top.length, 10);
+  assert.ok(t.top.every((u) => u.score === 55), "all tied at the top score");
+  assert.deepEqual(t.top.slice(0, 3).map((u) => u.vin), [obs(21).vin, obs(20).vin, obs(11).vin]);
+});
+
+test("store priorities: Fords first, then under 80k miles, then score; nothing under the price floor", () => {
+  const db = freshDb();
+  const lot = { name: "Example Motors", phone: "(228) 555-0101", city: "Gulfport", state: "MS", zip: "39501" };
+  applyObservations(db, [
+    obs(0, { dealer: lot, make: "Toyota", model: "Camry", miles: 95000, daysListed: 300, distance: 1, price: 18000 }), // best score, no priority
+    obs(1, { dealer: lot, make: "FORD", model: "Escape", miles: 120000, daysListed: 70, distance: 60, price: 12000 }),  // Ford, high miles
+    obs(2, { dealer: lot, make: "Ford", model: "F-150", miles: 61000, daysListed: 65, distance: 80, price: 26000 }),    // Ford under 80k
+    obs(4, { dealer: lot, make: "Honda", model: "Accord", miles: 79000, daysListed: 90, distance: 40, price: 15000 }),  // under 80k
+    obs(5, { dealer: lot, make: "Ford", model: "Focus", miles: 30000, daysListed: 200, distance: 1, price: 9500 }),     // under $10k
+  ], config);
+  const cfg = { ...config, minPrice: 10000, focusMakes: ["Ford"], focusUnderMiles: 80000 };
+  const t = B.buildCallList(db, { ...cfg, dailyListSize: 10 });
+  assert.deepEqual(t.top.map((u) => u.model), ["F-150", "Escape", "Accord", "Camry"], "Ford <80k, Ford, <80k, rest; the $9,500 Focus is gone");
+  assert.deepEqual(t.top[0].why.slice(0, 2), ["★ Ford", "under 80k mi"]);
+  assert.equal(B.browseListings(db, cfg).rows[0].model, "F-150", "All aged 'Best buys' uses the same order");
+});
+
+test("a one-source scan doesn't hide the other sources' last result (status chips, Dealers tab)", async () => {
+  const db = freshDb();
+  db.scans = [
+    { startedAt: "2026-10-27T03:00:00Z", trigger: "manual", sources: { marketcheck: { ok: true, found: 12 } } },
+    { startedAt: "2026-10-27T01:00:00Z", trigger: "manual", sources: {
+      cargurus: { ok: true, found: 100 }, dealerSites: { ok: true, found: 50, failed: [{ name: "Broken Site Auto", error: "site blocked or unavailable (HTTP 403)" }] },
+    } },
+  ];
+  const s = B.status(db, config);
+  assert.equal(s.lastScan.startedAt, "2026-10-27T03:00:00Z");
+  assert.deepEqual(Object.keys(s.lastScan.sources).sort(), ["cargurus", "dealerSites", "marketcheck"]);
+  assert.equal(s.lastScan.sources.cargurus.found, 100);
+  const { dealerRoster } = await import("../src/roster.js");
+  const [row] = dealerRoster(db, config, [{ name: "Broken Site Auto", url: "https://example.com/" }]);
+  assert.equal(row.error, "site blocked or unavailable (HTTP 403)");
+});
+
 test("price drops are per source: a cut counts, two sites disagreeing doesn't", () => {
   const db = freshDb();
   applyObservations(db, [obs(0, { price: 20000 }), obs(0, { source: "dealer", price: 19800 })], config);

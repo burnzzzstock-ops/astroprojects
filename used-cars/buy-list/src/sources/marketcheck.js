@@ -6,6 +6,9 @@
 
 export const SEARCH_URL = "https://api.marketcheck.com/v2/search/car/active";
 export const PAGE_ROWS = 50;
+// The free tier pages through the first 500 results of a search only (start=500 → HTTP 422,
+// seen live 2026-10-26), so a scan reads the 500 nearest aged cars: 10 calls.
+const MAX_RESULTS = 500;
 
 const int = (v) => {
   const n = Number(v);
@@ -47,6 +50,14 @@ export function normalizeMarketcheck(raw) {
     url: str(raw.vdp_url),
     photo: str(raw.media?.photo_links?.[0]),
     color: str(raw.exterior_color),
+    // the details the filters use (src/filters.js buckets these words)
+    colorGroup: str(raw.base_ext_color),
+    intColor: str(raw.base_int_color || raw.interior_color),
+    body: str(b.body_type),
+    drive: str(b.drivetrain),
+    fuel: str(b.fuel_type),
+    trans: str(b.transmission),
+    engine: str(b.engine) || (int(b.cylinders) ? `${int(b.cylinders)} cyl` : null),
     stock: str(raw.stock_no),
     isNew: false,
     distance: Number.isFinite(Number(raw.dist)) ? Number(raw.dist) : null,
@@ -70,7 +81,7 @@ export function normalizeMarketcheck(raw) {
  */
 export async function fetchMarketcheck(cfg, { callsUsedThisMonth = 0, fetchImpl = fetch, log = () => {} } = {}) {
   const s = cfg.sources.marketcheck;
-  const budget = Math.min(s.maxPages, s.monthlyCallCap - callsUsedThisMonth);
+  const budget = Math.min(s.maxPages, MAX_RESULTS / PAGE_ROWS, s.monthlyCallCap - callsUsedThisMonth);
   if (budget <= 0) throw new Error(`free-tier monthly cap reached (${s.monthlyCallCap} calls); resets on the 1st`);
   const f = {
     apiKey: s.apiKey, zip: cfg.zip, radius: Math.min(cfg.radiusMiles, 100), minDays: cfg.minDaysListed,

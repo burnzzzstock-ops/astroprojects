@@ -9,6 +9,7 @@ const { extractListings, parseJsonLoose, normalizeObject } = await import("../sr
 const { toNumber, parseCsv, dealerKeyOf } = await import("../src/util.js");
 const { zipForCity } = await import("../src/geo.js");
 const { isHomepage } = await import("../src/sources/dealerSites.js");
+const { looksBlocked } = await import("../src/browser.js");
 
 test("CarGurus-style feed: price, miles, days listed, seller, distance, deal rating", () => {
   const feed = {
@@ -31,6 +32,64 @@ test("CarGurus-style feed: price, miles, days listed, seller, distance, deal rat
   assert.equal(l.distance, 9);
   assert.equal(l.dealRating, "GOOD_PRICE");
   assert.equal(l.sourceId, "402358133");
+});
+
+test("live CarGurus feed shape (2026-10): bare array, city with state, photo object, expectedPrice isn't the price", () => {
+  const feed = [
+    { id: 457065290, vin: "1FTEX1EP5JF000011", listingTitle: "2008 Lexus LS 460 L RWD", makeName: "Lexus", modelName: "LS",
+      carYear: 2008, price: 12998, expectedPrice: 11800, mileage: 140000, daysOnMarket: 61, sellerType: "DEALER",
+      sellerCity: "Gulfport, MS", sellerRegion: "MS", sellerPostalCode: "39501", serviceProviderName: "Example Motors",
+      phoneNumberString: "(228) 555-0111", originalPictureData: { url: "https://static.example.com/p-1024x768.jpg" } },
+    { id: 457065291, vin: "1FTEX1EP5JF000012", listingTitle: "2016 Ford Fusion SE", makeName: "Ford", modelName: "Fusion",
+      carYear: 2016, expectedPrice: 9500, mileage: 98000, daysOnMarket: 61, sellerCity: "Biloxi, MS" },
+  ];
+  const [a, b] = extractListings(feed);
+  assert.equal(a.price, 12998);
+  assert.equal(a.daysListed, 61);
+  assert.equal(a.dealer.city, "Gulfport");
+  assert.equal(a.dealer.state, "MS");
+  assert.equal(a.photo, "https://static.example.com/p-1024x768.jpg");
+  assert.equal(b.price, null);
+  assert.equal(b.dealer.city, "Biloxi");
+});
+
+test("live CarGurus feed: the details the filters use (body, drivetrain, fuel, colors, CPO, market value, options, franchise)", () => {
+  const [l] = extractListings([{ id: 1, vin: "1FTEX1EP5JF000015", listingTitle: "2021 Ford F-150 XLT SuperCrew 4WD", makeName: "Ford", modelName: "F-150",
+    carYear: 2021, price: 32500, mileage: 57839, daysOnMarket: 249, bodyTypeName: "Pickup Truck", localizedDriveTrain: "Four-Wheel Drive",
+    localizedFuelType: "Gasoline", localizedTransmission: "10-Speed Automatic", localizedEngineDisplayName: "400 hp 3.5L V6",
+    exteriorColorName: "Oxford White", normalizedExteriorColor: "WHITE", localizedInteriorColor: "Black (Medium Earth Gray)",
+    isCPO: true, expectedPrice: 34100, options: ["Bluetooth", "Backup Camera", "Bluetooth"], isFranchiseDealer: true,
+    serviceProviderName: "Example Motors", sellerCity: "Gulfport, MS" }]);
+  assert.deepEqual([l.body, l.drive, l.fuel, l.trans, l.engine], ["Pickup Truck", "Four-Wheel Drive", "Gasoline", "10-Speed Automatic", "400 hp 3.5L V6"]);
+  assert.deepEqual([l.color, l.colorGroup, l.intColor], ["Oxford White", "WHITE", "Black (Medium Earth Gray)"]);
+  assert.equal(l.cpo, true);
+  assert.equal(l.marketValue, 34100);
+  assert.equal(l.price, 32500, "the market value isn't the price");
+  assert.deepEqual(l.features, ["Bluetooth", "Backup Camera"]);
+  assert.equal(l.dealer.type, "franchise");
+});
+
+test("DealerOn feed: Vehicle* fields, in-stock date, price from VehiclePriceLibrary when TaggingPrice is 0", () => {
+  const lib = Buffer.from("MSRP:0.0;Selling Price:18873.0;reff_Flat Low Price:18873.0;calc_INTERNET PRICE:19822.0").toString("base64");
+  const since = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10).replace(/-/g, "/");
+  const [l] = extractListings({ DisplayCards: [{ VehicleVin: "1FTEX1EP5JF000013", VehicleYear: 2020, VehicleMake: "Ford", VehicleModel: "Explorer",
+    VehicleTrim: "Platinum", VehicleName: "2020 Ford Explorer Platinum", TaggingPrice: 0, VehicleInternetPrice: 0, VehiclePriceLibrary: lib,
+    Mileage: "66,585 mi", VehicleStockNumber: "5-1076A", VehicleTaggingInventoryDate: since, VehicleCondition: "Used",
+    VehicleDetailUrl: "https://dealer.example/used-Mobile-2020-Ford-Explorer-Platinum-1FTEX1EP5JF000013" }] });
+  assert.deepEqual([l.vin, l.year, l.make, l.model, l.trim], ["1FTEX1EP5JF000013", 2020, "Ford", "Explorer", "Platinum"]);
+  assert.equal(l.price, 18873);
+  assert.equal(l.miles, 66585);
+  assert.equal(l.stock, "5-1076A");
+  assert.ok(Math.abs(l.daysListed - 40) <= 1);
+  assert.equal(l.isNew, false);
+});
+
+test("AutoCorner feed (/json/srp_vehicles.json): vehicle_* fields", () => {
+  const [l] = extractListings({ total_count: 1, filtered_vehicles: [{ vehicle_id: "F5518A60", vehicle_stocknum: "P198",
+    vehicle_caption: "2012 Gmc Acadia SLT-1 AWD", vehicle_vin: "1FTEX1EP5JF000014", vehicle_year: "2012", vehicle_make: "Gmc",
+    vehicle_model: "Acadia", vehicle_trim: "SLT-1 AWD", vehicle_miles: "147306", vehicle_price: "5888", vehicle_sale_price: "" }] });
+  assert.deepEqual([l.vin, l.year, l.make, l.model, l.trim, l.title], ["1FTEX1EP5JF000014", 2012, "Gmc", "Acadia", "SLT-1 AWD", "2012 Gmc Acadia SLT-1 AWD"]);
+  assert.deepEqual([l.price, l.miles, l.stock], [5888, 147306, "P198"]);
 });
 
 test("schema.org JSON-LD car on a dealer page (strings with $ and commas, nested offers/seller)", () => {
@@ -108,6 +167,20 @@ test("homepage vs inventory links in dealers.csv", () => {
   assert.equal(isHomepage("https://www.example-motors.com/searchused.aspx"), false);
   assert.equal(isHomepage("https://www.example-motors.com/inventory"), false);
   assert.equal(isHomepage("https://www.example-motors.com/pre-owned/"), false);
+});
+
+test("bot walls vs a normal page that loads reCAPTCHA for its contact form", () => {
+  const recaptcha = `<html><head><script src="https://www.gstatic.com/recaptcha/releases/x/recaptcha__en.js"></script></head>
+    <body><input type="hidden" id="google_recaptcha_token" value=""><div class="g-recaptcha"></div></body></html>`;
+  assert.equal(looksBlocked("Cars For Sale in Gulfport, MS - Example Motors", recaptcha), false);
+  const widgets = `<html><head><style data-styles="">offer-refresh,dealer-listing,captcha-field,dealer-boost{visibility:hidden}</style></head><body>Used Kia</body></html>`;
+  assert.equal(looksBlocked("Used Kia Sales in Gulfport", widgets), false);
+  assert.equal(looksBlocked("Example Motors", "<html><body><h1>Please verify you are human</h1></body></html>"), true);
+  const datadome = `<html><head><title>example.com</title></head><body><script src="https://ct.captcha-delivery.com/c.js"></script>
+    <iframe src="https://geo.captcha-delivery.com/captcha/?x=1" title="DataDome CAPTCHA"></iframe></body></html>`;
+  assert.equal(looksBlocked("example.com", datadome), true);
+  assert.equal(looksBlocked("Access Denied", "<html></html>"), true);
+  assert.equal(looksBlocked("Just a moment...", "<html></html>"), true);
 });
 
 test("ZIP from city/state when a dealer row has none", () => {

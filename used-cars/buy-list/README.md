@@ -1,6 +1,6 @@
 # Buy List
 
-Every morning, a list of used cars for sale within 100 miles of 39540 that have
+Every morning, a list of used cars for sale within 200 miles of 39540 that have
 been listed a long time (60+ days), ranked and grouped by dealer, for the used car
 manager to call and try to buy. It costs nothing (no paid services) and runs one
 of two ways:
@@ -14,16 +14,20 @@ of two ways:
 
 - **Scans three free sources at 6:00 AM (Mon-Sat):**
   - **CarGurus** shows how many days every car has been listed. The tool reads it
-    oldest-listed first within 100 miles.
-  - **Dealer websites** in `dealers.csv`, which comes filled in with 313 dealers
+    oldest-listed first within 200 miles (from $10,000 up, in price bands).
+  - **Dealer websites** in `dealers.csv`, which comes filled in with 308 dealers
     within about 100 miles (see below). Most don't show days listed, so the tool
     counts from the first day it sees each car (and uses an in-stock date when a
     site publishes one).
   - **Marketcheck free tier** (optional): $0, no credit card, ~500 lookups a month.
-    It's skipped unless you add a free key.
+    It's skipped unless you add a free key (`sources.marketcheck.apiKey` in config.json). Each
+    scan reads the 500 nearest aged cars (the free tier's limit) and catches cars a dealer
+    re-listed to reset CarGurus' day count. Use the key on one PC only: each copy counts its own
+    lookups against the same monthly limit.
 - **One record per car.** The same VIN on several sources is merged, and "days
   listed" is the longest any source reports.
-- **Ranks every car with a reason for each point:** days listed, price drops,
+- **Fords first, then cars under 80,000 miles,** then everything else; nothing under $10,000.
+  Within each group it ranks every car with a reason for each point: days listed, price drops,
   distance, and anything that changed since your last call.
 - **Groups by dealer**, so one call covers every aged car on that lot. Private
   sellers each get their own card.
@@ -90,7 +94,7 @@ your Cloudflare account, behind the PIN. The scan's memory (public listing data:
 prices, first-seen dates) is kept on the `buy-list-state` branch so each morning
 picks up where the last one left off.
 
-**Heads-up:** CarGurus often blocks cloud servers, so on the web version the
+**Heads-up:** CarGurus may block cloud servers. If it does, on the web version the
 dealer websites (and Marketcheck, if you add the free key) do most of the work.
 The **Dealers** tab shows which sites were read.
 
@@ -102,17 +106,22 @@ asleep at 6:00, it scans as soon as the PC is back on.
 ### Setup (Windows, one time)
 
 1. Install **Node.js LTS** from https://nodejs.org (accept the defaults).
-2. Get this folder onto the PC: on GitHub, click **Code → Download ZIP**, unzip it,
-   and open `used-cars\buy-list`. Any location works, e.g. `Documents\buy-list`.
+2. Get this folder onto the PC: download
+   https://github.com/burnzzzstock-ops/astroprojects/archive/refs/heads/main.zip (the
+   repo's default branch on GitHub isn't `main`, so **Code → Download ZIP** gets a copy
+   without this folder), unzip it, and open `used-cars\buy-list`. Any location works,
+   e.g. `Documents\buy-list`. Moving it from another PC instead? Copy the folder without
+   `node_modules`; bring `config.json` and `data\buylist.json` along to keep its settings,
+   list and call history.
 3. Double-click **`setup.bat`**. It installs everything (a few minutes the first
    time), makes the Buy List start whenever you log in, puts a **Buy List** shortcut
    on the desktop, and opens the page.
 4. Open **`config.json`** in Notepad and check `excludeSellers`: your own store's
    name has to be in there so your lot isn't on the list.
-5. Look over **`dealers.csv`** (Excel or Notepad). It comes with 313 dealers within
+5. Look over **`dealers.csv`** (Excel or Notepad). It comes with 308 dealers within
    about 100 miles, closest first: the Mississippi Coast, Pascagoula to Picayune,
    Hattiesburg/Laurel/Columbia, Mobile and Baldwin County, Slidell, the north
-   shore, Hammond and the New Orleans metro (171 franchise stores, 142
+   shore, Hammond and the New Orleans metro (171 franchise stores, 137
    independent lots). They were found by web search on 2026-10-26, so expect a
    few dead links and call-tracking phone numbers; the **Dealers** tab shows which
    sites read and which didn't after each scan. Delete lots you'd never buy from
@@ -135,13 +144,26 @@ asleep at 6:00, it scans as soon as the PC is back on.
 Open the web link (or, on the PC version, the **Buy List** shortcut or
 http://localhost:4400).
 
-- **Today's calls**: who to call, best first, with a High or Medium priority tag
-  and a plain "Why it's on the list" line. Tap the green **Call** button, then tap
-  how the call went. **Notes from the call** and **Our offer** save with it.
+- **Today's calls**: who to call, best first. **Top 10 today** at the top is the
+  ten best cars, each with its dealer's green **Call** button; tap a car's name to
+  jump to its full entry. Below that, the calls are grouped by dealer, with a High
+  or Medium priority tag and a plain "Why it's on the list" line. Tap **Call**, then
+  tap how the call went. **Notes from the call** and **Our offer** save with it.
 - **Nobody picked up?** One tap marks every car at that dealer No answer or Left a
   message.
 - **Hide this dealer** takes a lot off the list for good. Undo it on the **Hidden
   dealers** tab with **Show again**.
+- **What we're looking for** (above the tabs): about two dozen filters, pick as
+  many as you like in each: make, model, year, body style, drivetrain, fuel,
+  engine, transmission, exterior and interior color, features (leather, sunroof,
+  third row…), certified, price, miles, days listed, price vs. CarGurus' market
+  value, CarGurus rating, price dropped, distance, state, city, dealer, franchise
+  or independent, where it was found, and call status. The Top 10, today's calls,
+  Search all cars and the spreadsheet all follow them. **+ Save this search** keeps
+  a set under a name ("Trucks under 40k"); tap it to switch back. **★ Astro
+  default** clears them: everything aged, Fords first, then under 80k miles. On the
+  web version the filters and saved searches are kept online, so they're the same
+  on every phone and computer.
 - **Search all cars** searches every aged car ("tacoma", "f-150 lariat",
   "gulfport").
 - **Dealers** lists every dealer being watched, closest first, with how many aged
@@ -161,14 +183,18 @@ firewall: allow it on **private** networks.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `zip`, `radiusMiles` | 39540, 100 | Center and radius of the search |
+| `zip`, `radiusMiles` | 39540, 200 | Center and radius of the search (CarGurus; the dealer-site list covers ~100 mi) |
 | `minDaysListed` / `maxDaysListed` | 60 / 365 | "Listed a long time" window; past 365 days is usually a dead listing |
-| `minPrice`, `maxMiles` | 4000, 175000 | Skip junk |
+| `minPrice`, `maxMiles` | 10000, 175000 | Skip junk |
+| `focusMakes` | ["Ford"] | Makes ranked first (add "Lincoln" etc.; `[]` = off) |
+| `focusUnderMiles` | 80000 | Then cars under this many miles (`0` = off) |
 | `dailyListSize` | 25 | Cars on today's list |
+| `topListSize` | 10 | Cars in the "Top 10 today" list |
 | `scanTime`, `scanDays` | "06:00", Mon-Sat | When the morning scan runs (0 = Sunday) |
 | `excludeSellers` | your store + CarMax, Carvana… | Seller-name words to never list |
 | `browser.headless` | true | Set `false` to watch the browser work (helps if a site asks "are you human?") |
-| `sources.cargurus.maxPages` | 60 | How deep into CarGurus' oldest-first results to go |
+| `sources.cargurus.maxPages` | 400 | Most CarGurus pages per scan, all price bands together (each band stops on its own at 60 days) |
+| `sources.cargurus.priceBands` | 10000 … 60000 | Price edges the CarGurus search is split on (it returns at most 10,000 results per search) |
 | `sources.marketcheck.apiKey` | "" | Optional free key from https://www.marketcheck.com/apis |
 | `sources.dealerSites.maxPagesPerDealer` | 8 | Pages or "load more" clicks per dealer site |
 | `sources.dealerSites.concurrency` | 3 | Dealer sites read at the same time |
@@ -200,10 +226,11 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 35 tests offline: the extractor against CarGurus, JSON-LD and
-dealer-API data shapes; merging and price drops; ranking; call outcomes; a full
-headless-browser scan against fake local copies of each kind of site; and the web
-version's published data and Cloudflare API (PIN gate, outcomes, hide/unhide).
-To try the web version locally: `node cloud/build.mjs`, put `ACCESS_PIN=123456`
-in `cloud/.dev.vars`, then `npx wrangler dev --local` in `cloud/`. See
+`npm test` runs 55 tests offline: the extractor against CarGurus, JSON-LD and
+dealer-API data shapes; merging and price drops; ranking; filters; call outcomes;
+a full headless-browser scan against fake local copies of each kind of site; and
+the web version's published data and Cloudflare API (PIN gate, outcomes,
+hide/unhide, saved searches). To try the web version locally: `node
+cloud/build.mjs`, put `ACCESS_PIN=123456` in `cloud/.dev.vars`, then `npx wrangler
+dev --local` in `cloud/`. See
 `../../CLAUDE.md` for how it's built.

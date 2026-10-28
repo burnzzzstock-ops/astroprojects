@@ -28,7 +28,21 @@ test("publish: aged + still for sale, plus anything called; hidden dealers left 
   assert.ok(!keys.includes(young));
   assert.ok(!("srcPrice" in pub.aged[0]) && !("status" in pub.aged[0]), "no scan internals or call state");
   assert.equal(pub.status.filters.minDaysListed, 60);
+  assert.ok("focusMakes" in pub.status.filters && "topListSize" in pub.status.filters, "the ranking settings ride along");
   assert.ok(pub.status.publishedAt);
+});
+
+test("publish: the filter details ride along, and each source's latest run shows", () => {
+  const db = freshDb();
+  applyObservations(db, [obs(0, { body: "Pickup Truck", drive: "4WD" })], config);
+  db.scans = [
+    { startedAt: "2026-10-27T03:00:00Z", sources: { marketcheck: { ok: true, found: 12 } } },
+    { startedAt: "2026-10-27T01:00:00Z", sources: { cargurus: { ok: true, found: 100 } } },
+  ];
+  const pub = buildPublished(db, config, []);
+  assert.equal(pub.aged[0].body, "Pickup Truck");
+  assert.equal(pub.aged[0].drive, "4WD");
+  assert.equal(pub.status.lastScan.sources.cargurus.found, 100, "a one-source scan doesn't hide the others");
 });
 
 // Cloudflare D1, as far as worker.js uses it, on node:sqlite.
@@ -50,7 +64,10 @@ async function worker() {
   const kv = new Map();
   const env = {
     ACCESS_PIN: "246810", TIMEZONE: "America/Chicago", DB: fakeD1(),
-    DATA: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => kv.set(k, v) },
+    DATA: {
+      get: async (k, type) => (kv.has(k) && type === "stream" ? new Blob([kv.get(k)]).stream() : kv.get(k) ?? null),
+      put: async (k, v) => kv.set(k, v),
+    },
     ASSETS: { fetch: async () => new Response("page") },
   };
   const call = (method, path, body, pin = "246810", ip = "10.0.0.1") => w.fetch(new Request(`https://buy-list.example.workers.dev${path}`, {
@@ -75,12 +92,25 @@ test("server: the PIN gate (missing, wrong, too many wrong, not set up)", { skip
 test("server: data passes the scan's files through and adds the call notes", { skip: !sqlite && "needs node:sqlite (Node 22+)" }, async () => {
   const { kv, call } = await worker();
   kv.set("status", JSON.stringify({ filters: { zip: "39540" } }));
-  kv.set("aged", JSON.stringify([{ key: "K1", price: 20000 }]));
   const d = await (await call("GET", "/api/data")).json();
   assert.equal(d.status.filters.zip, "39540");
-  assert.equal(d.aged[0].key, "K1");
   assert.deepEqual(d.dealers, [], "no dealers file yet → empty list, still valid JSON");
-  assert.deepEqual(d.desk, { states: [], hidden: [], calls: [] });
+  assert.deepEqual(d.desk, { states: [], hidden: [], calls: [], prefs: { active: {}, saved: [] } });
+  assert.deepEqual(await (await call("GET", "/api/aged")).json(), [], "no scan yet → no cars");
+  kv.set("aged", JSON.stringify([{ key: "K1", price: 20000 }]));
+  assert.equal((await (await call("GET", "/api/aged")).json())[0].key, "K1");
+  assert.equal((await call("GET", "/api/aged", null, "")).status, 401, "the cars need the PIN too");
+});
+
+test("server: the filter and saved searches stick, cleaned like the PC app's", { skip: !sqlite && "needs node:sqlite (Node 22+)" }, async () => {
+  const { call } = await worker();
+  let p = await (await call("PUT", "/api/prefs", { active: { make: ["Ford"], bogus: 1, price: [null, 30000] } })).json();
+  assert.deepEqual(p, { active: { make: ["Ford"], price: [null, 30000] }, saved: [] }, "unknown categories dropped");
+  p = await (await call("PUT", "/api/prefs", { saved: [{ name: " Trucks ", filter: { body: ["Truck"] } }, { name: "", filter: {} }] })).json();
+  assert.deepEqual(p.saved, [{ name: "Trucks", filter: { body: ["Truck"] } }], "nameless searches dropped");
+  assert.deepEqual(p.active, { make: ["Ford"], price: [null, 30000] }, "saving searches keeps the current filter");
+  const d = await (await call("GET", "/api/data")).json();
+  assert.deepEqual(d.desk.prefs, p);
 });
 
 test("server: call outcomes, reopen, hide/unhide, scan button", { skip: !sqlite && "needs node:sqlite (Node 22+)" }, async () => {

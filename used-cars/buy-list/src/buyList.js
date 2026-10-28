@@ -1,8 +1,9 @@
 // Ranking the aged cars into today's call list, and recording call outcomes.
 // Pure functions over the db object (the server wraps them with readDb/withDb).
 // Pure (no Node-only imports): the web version runs this same code in the browser.
-import { clamp01, money, localDay, csvCell } from "./util.js";
+import { clamp01, money, localDay, csvCell, norm } from "./util.js";
 import { daysListed, isActive } from "./age.js";
+import { matches, facetCounts, FACET_DEFS } from "./filters.js";
 
 // Call outcome → the car's status and how many days until it's due again.
 export const OUTCOMES = {
@@ -43,17 +44,32 @@ export function scoreListing(l, { days, radius = 100 }) {
   if (!l.price) { s -= 10; why.push("no price posted"); }
   if (l.miles && l.miles > 150000) s -= 5;
   if (l.dealer?.type === "private" || String(l.dealerKey).startsWith("private:")) why.push("private seller");
-  if (l.dealRating) why.push(`CarGurus: ${RATING(l.dealRating)}`);
+  if (l.dealRating && !/^(na|n\/a|none|unknown)$/i.test(l.dealRating)) why.push(`CarGurus: ${RATING(l.dealRating)}`); // "NA" = no rating
   return { score: Math.max(0, Math.round(s)), why };
+}
+
+/**
+ * The store's priorities rank ahead of the score: `focusMakes` first (Ford), then cars
+ * under `focusUnderMiles`. tier 0-3, higher first; each shows as a chip.
+ */
+export function priorityOf(l, cfg) {
+  const make = (cfg.focusMakes || []).find((m) => norm(m) && norm(m) === norm(l.make));
+  const low = cfg.focusUnderMiles > 0 && l.miles != null && l.miles < cfg.focusUnderMiles;
+  const why = [];
+  if (make) why.push(`★ ${make}`);
+  if (low) why.push(`under ${Math.round(cfg.focusUnderMiles / 1000)}k mi`);
+  return { tier: (make ? 2 : 0) + (low ? 1 : 0), why };
 }
 
 function view(l, cfg, now) {
   const days = daysListed(l, now);
+  const s = scoreListing(l, { days, radius: cfg.radiusMiles });
+  const p = priorityOf(l, cfg);
   return {
     ...l, days,
     sources: Object.keys(l.seen || {}).map((k) => ({ key: k, label: SOURCE_LABEL[k] || k, url: l.urls?.[k] || null })),
     stale: !isActive(l, now),
-    ...scoreListing(l, { days, radius: cfg.radiusMiles }),
+    score: s.score, tier: p.tier, why: [...p.why, ...s.why],
   };
 }
 
@@ -78,24 +94,31 @@ function dealerCard(u) {
 
 const RIDE_ALONG_MAX = 6;
 
-/**
- * Today's list: the top-N due cars by score, grouped by dealer (best first) so one
- * call covers every aged car on that lot; that dealer's other due cars ride along.
- * Cars being negotiated are pinned separately.
- */
+// Best first: the store's priority tier (Ford, then low miles), then score, then listed
+// longest, then closest (plenty of cars tie at the top score).
+const byBest = (a, b) => b.tier - a.tier || b.score - a.score || b.days - a.days || (a.distance ?? Infinity) - (b.distance ?? Infinity);
+
 // Due today: never called, its call-back day has come, or its price dropped after
 // the last call (a "too high" car comes back as soon as the dealer cuts it).
 const isDue = (l, today) => !l.nextCallDay || l.nextCallDay <= today
   || (l.status === "working" && l.lastDropAt && l.lastCallAt && l.lastDropAt > l.lastCallAt);
 
-export function buildCallList(db, cfg, now = Date.now()) {
+/**
+ * Today's list: the top-N due cars by score, grouped by dealer (best first) so one
+ * call covers every aged car on that lot; that dealer's other due cars ride along.
+ * `top` is the best `topListSize` (10) of those as a plain ranked list. `filter` is the
+ * UCM's filter (src/filters.js); none = the store's default ranking over everything aged.
+ * Cars being negotiated are pinned separately (any filter).
+ */
+export function buildCallList(db, cfg, now = Date.now(), filter = {}) {
   const today = localDay(0, new Date(now));
   const hidden = db.hiddenDealers || {};
   const due = Object.values(db.listings)
     .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && isDue(l, today))
     .filter((l) => eligible(l, cfg, now))
     .map((l) => view(l, cfg, now))
-    .sort((a, b) => b.score - a.score);
+    .filter((u) => matches(u, filter))
+    .sort(byBest);
 
   const picked = due.slice(0, cfg.dailyListSize);
   const byDealer = new Map();
@@ -112,11 +135,22 @@ export function buildCallList(db, cfg, now = Date.now()) {
     .map((l) => view(l, cfg, now));
   const later = Object.values(db.listings)
     .filter((l) => !hidden[l.dealerKey] && ["new", "working"].includes(l.status) && !isDue(l, today) && eligible(l, cfg, now)).length;
-  return { today, dealers: [...byDealer.values()], negotiating, dueTotal: due.length, laterCount: later };
+  return { today, top: due.slice(0, cfg.topListSize ?? 10), dealers: [...byDealer.values()], negotiating, dueTotal: due.length, laterCount: later };
+}
+
+// Every aged car still for sale (any status), dealer not hidden.
+const agedPool = (db, cfg, now) => Object.values(db.listings)
+  .filter((l) => !db.hiddenDealers[l.dealerKey] && eligible(l, cfg, now))
+  .map((l) => view(l, cfg, now));
+
+/** The filter panel: every category's options with counts, and how many cars match. */
+export function filterSummary(db, cfg, filter = {}, now = Date.now()) {
+  const pool = agedPool(db, cfg, now);
+  return { pool: pool.length, ...facetCounts(pool, filter), defs: FACET_DEFS };
 }
 
 /** Every aged car still for sale (any status), for "find me a Tacoma". */
-export function browseListings(db, cfg, { q = "", sort = "score", limit = 150 } = {}, now = Date.now()) {
+export function browseListings(db, cfg, { q = "", sort = "score", limit = 150, filter = {} } = {}, now = Date.now()) {
   const terms = String(q).toLowerCase().split(/\s+/).filter(Boolean);
   let rows = Object.values(db.listings)
     .filter((l) => !db.hiddenDealers[l.dealerKey] && eligible(l, cfg, now));
@@ -127,13 +161,13 @@ export function browseListings(db, cfg, { q = "", sort = "score", limit = 150 } 
     });
   }
   const by = {
-    score: (a, b) => b.score - a.score,
+    score: byBest,
     days: (a, b) => b.days - a.days,
     drops: (a, b) => b.priceDrops - a.priceDrops || b.priceDropTotal - a.priceDropTotal,
     price: (a, b) => (a.price || Infinity) - (b.price || Infinity),
     distance: (a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity),
-  }[sort] || ((a, b) => b.score - a.score);
-  const scored = rows.map((l) => view(l, cfg, now)).sort(by);
+  }[sort] || byBest;
+  const scored = rows.map((l) => view(l, cfg, now)).filter((u) => matches(u, filter)).sort(by);
   return { total: scored.length, rows: scored.slice(0, limit) };
 }
 
@@ -167,6 +201,10 @@ export function recordOutcome(db, keys, outcome, { notes = null, offer = null, t
   return { updated };
 }
 
+// Each source's result from the most recent scan that ran it, so a one-source scan
+// ("Scan now", `npm run scan -- --only marketcheck`) doesn't hide the others' last result.
+export const lastRun = (db, k) => db.scans.find((s) => s.sources?.[k])?.sources[k] || null;
+
 export function status(db, cfg, now = Date.now()) {
   const aged = Object.values(db.listings).filter((l) => !db.hiddenDealers[l.dealerKey] && eligible(l, cfg, now));
   const open = aged.filter((l) => !["bought", "passed"].includes(l.status));
@@ -179,7 +217,9 @@ export function status(db, cfg, now = Date.now()) {
       minPrice: cfg.minPrice, maxMiles: cfg.maxMiles, dailyListSize: cfg.dailyListSize, scanTime: cfg.scanTime,
     },
     sourcesEnabled: Object.fromEntries(Object.entries(cfg.sources).map(([k, v]) => [k, !!v.enabled])),
-    lastScan: db.scans[0] || null,
+    lastScan: db.scans[0]
+      ? { ...db.scans[0], sources: Object.fromEntries(Object.keys(cfg.sources).map((k) => [k, lastRun(db, k)]).filter(([, r]) => r)) }
+      : null,
     marketcheck: { used: db.marketcheckCalls[month] || 0, cap: cfg.sources.marketcheck.monthlyCallCap, hasKey: !!cfg.sources.marketcheck.apiKey },
     stats: {
       tracked: open.length,

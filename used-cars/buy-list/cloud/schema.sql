@@ -35,3 +35,8 @@ CREATE TABLE IF NOT EXISTS pin_failures (
   at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS pin_failures_ip ON pin_failures (ip, at);
+CREATE TABLE IF NOT EXISTS live_calls (  -- Search the U.S. requests, for the per-hour limit
+  ip TEXT NOT NULL,
+  at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS live_calls_ip ON live_calls (ip, at);

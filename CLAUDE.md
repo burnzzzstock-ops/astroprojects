@@ -160,7 +160,7 @@ the config template, adds a Startup shortcut to `start.bat` (restart loop) and a
   one). The details are stored per car by `listings.js` (`DETAIL_FIELDS`) from any source. API:
   `?f=<json>` on `/api/today`, `/api/today.csv`, `/api/listings`; `GET /api/filters` (defs + counts);
   `GET/PUT /api/prefs` (`{active, saved:[{name, filter}]}`). No filter = "Astro default".
-- **Forgiving search** (`src/search.js`, 2026-10-28): "Search all cars" (`browseListings` q) and the
+- **Forgiving search** (`src/search.js`, 2026-10-28): "Search aged cars" (`browseListings` q) and the
   filter's search box (`f.q`, via `withSearch` in filters.js) match every word against each car's
   year/make/model/trim/title/dealer/city/VIN/stock with punctuation squashed out ("f150" = "F-150";
   "f 150", "cr v", "4 wd" are joined: a 1-2 letter piece + a word starting with a digit or as short).
@@ -172,7 +172,38 @@ the config template, adds a Startup shortcut to `start.bat` (restart loop) and a
   exact word never pulls in look-alikes (camry ≠ Camaro). `fixes: [{from, to}]` come back on
   `browseListings` (its own q) and `filterSummary` (the filter's q); the page shows "Did you mean
   **Tacoma**?" (`showFixes` → `#allFix` / `#fFix`) or "Nothing on the list is close to …".
+- **Search the U.S.** (`src/live.js`, 2026-11-19): any used car in America, any age, pulled from
+  CarGurus when the UCM searches and never stored. A daily mirror of every listing (a few million
+  cars) isn't workable: ~60k+ requests a pass, GBs past the free tiers, sold-car detection means
+  re-checking everything, and copying a competitor's whole inventory is a legal risk (the "Zillow of
+  used cars" path is licensed data / dealer feeds, not scraping). One CarGurus request per search or
+  "Show more" (48 cars). Checked live: `distance=50000` = nationwide, any radius is honored (437 → cars
+  out to 403 mi), `entitySelectingHelper.selectedEntity` takes a make (`m2` Ford) or model (`d337`
+  F-150), `startYear/endYear/minPrice/maxPrice/maxMileage` work, sorts DEAL_SCORE ASC (great deals
+  first), PRICE, MILEAGE, AGE_IN_DAYS work; DISTANCE and YEAR sorts are ignored. **Requests go out
+  plain**: with a browser User-Agent but node's fetch, CarGurus answers 406; with no headers, 200.
+  Don't add browser headers. **Works from Cloudflare's network** (checked 2026-11-19 with a throwaway
+  `wrangler dev --remote` worker: 200 + 48 cars). `cleanLiveQuery` checks everything (ids must be in
+  the catalog and the model must belong to the make; numbers ranged; real states). Where: anywhere
+  (nationwide from the store zip), near a ZIP + radius, or states: one circle from the picked state
+  nearest their middle reaching every picked state's far edge (nationwide past 1,500 mi), and cars
+  outside the states dropped (`liveArea`). `REGIONS`: Census divisions in plain words + "Gulf Coast".
+  `liveResults` adds rough road miles from the store (ZIP3 centroids × 1.2), `shippingEstimate`
+  (0 under 75 mi; $150 + $1.10/mi first 300, $0.75 to 1,000, $0.50 past, nearest $25), delivered
+  price and `vsMarket` (delivered − CarGurus' `expectedPrice`); each page is re-sorted by the chosen
+  sort except best deals (CarGurus' own order is loose). Tables: `src/catalog.js` (224 makes, 3,140
+  models with ids, from CarGurus' car-picker JSON; `node scripts/update-catalog.mjs`) and
+  `src/usgeo.js` (51 state centers + covering radius, 911 ZIP3 centroids, from `zipcodes`;
+  `node scripts/update-geo.mjs`). PC: `GET /api/live?q=<json>` (≥1 s apart) + `/api/catalog` in
+  server.js. Web: the worker builds the URL itself (never fetches a URL from the page: no open proxy),
+  300 searches/IP/hour (`live_calls`), streams CarGurus' body unparsed; `adapter.js` answers
+  `/api/catalog` from the bundle and turns `/api/live` into cars with `BuyLogic.liveResults`.
+  Page: "Search the U.S." tab (make/model dropdowns with popular first, years, prices, most miles,
+  sort, Where: anywhere / states with region pills / near a ZIP; cards with shipping + delivered + vs
+  market and a "listed over a year" warning; Show more; up to 4 pages per tap until 12 new cars;
+  last search remembered in localStorage). Results can't be logged as calls yet.
 - **Pure modules** (bundle for the browser, no Node imports): `src/buyList.js`, `src/filters.js`, `src/search.js`,
+  `src/live.js` (+ its data `src/catalog.js`, `src/usgeo.js`, and `src/extract.js`),
   `src/age.js` (`daysListed`, `isActive`, `ACTIVE_DAYS`), `src/util.js` (`localDay(offset, now,
   timeZone)`: cloud code passes "America/Chicago" since Cloudflare/GitHub run on UTC). Node-only:
   `src/geo.js` (`zipDistance`, `zipForCity` via `zipcodes`), `src/roster.js`, `src/publish.js`.
@@ -192,7 +223,8 @@ the config template, adds a Startup shortcut to `start.bat` (restart loop) and a
   too high", "Not interested", a "Why it's on the list:" sentence that also spells out the store
   priority, e.g. "Ford (a store priority), under 80,000 miles"). High/Medium priority badge instead
   of the raw score (`priorityLevel`: tier ≥2 or score ≥60 = High; tier ≥1 or score ≥40 = Medium).
-  2×2 tabs and 2-column outcome buttons on phones. In-page PIN dialog (`askPin`, re-asks on every
+  Five tabs (Today's calls, Search aged cars, Search the U.S., Dealers, Hidden dealers): one row on
+  a desktop, pairs on phones with the last one full width; 2-column outcome buttons on phones. In-page PIN dialog (`askPin`, re-asks on every
   401) instead of `prompt()`. "What we're looking for" card above the tabs: saved-search pills
   (★ Astro default, named searches with ×, + Save this search), removable amber filter chips, the
   panel (groups of `<details>` with Show/Hide, 22px tick boxes with counts, find box for long
@@ -220,7 +252,7 @@ the config template, adds a Startup shortcut to `start.bat` (restart loop) and a
     `cloud/build.mjs`: the shared page + `logic.js` [esbuild IIFE `BuyLogic` of buyList.js +
     filters.js `parseFilter`] + `adapter.js`). The worker never parses the scan data (stays under
     the 10ms CPU limit): `GET /api/data` = KV status + dealers strings + the desk from D1
-    (`schema.sql`: car_state, calls, hidden, prefs [one row], pin_failures); `GET /api/aged` streams
+    (`schema.sql`: car_state, calls, hidden, prefs [one row], pin_failures, live_calls); `GET /api/aged` streams
     the KV value as is (several MB at 200 mi). `adapter.js` overrides `fetch("/api/…")` and answers
     status/today/listings/filters/prefs/dealers/hidden in the browser with the same ranking and
     filter code (`?f=` honored); outcomes, hide/unhide and `PUT /api/prefs` (cleaned with
@@ -237,10 +269,12 @@ the config template, adds a Startup shortcut to `start.bat` (restart loop) and a
   - Local try-out: `node cloud/build.mjs`, `cloud/.dev.vars` with ACCESS_PIN, `npx wrangler dev
     --local` in cloud/ (gitignored: cloud/public, .wrangler, .dev.vars, .scan-data). Restart
     `wrangler dev` after a rebuild if the page starts answering 500 (it loses the rebuilt folder).
-- **Tests:** `npm test` (node --test, 60 tests, offline). `test/filters.test.mjs`: buckets, matching,
+- **Tests:** `npm test` (node --test, 68 tests, offline). `test/live.test.mjs`: Search the U.S. (catalog,
+  checked picks, states/regions/nationwide areas, request params, shipping, results kept to the states,
+  page order, plain request). `test/filters.test.mjs`: buckets, matching,
   counts, and the call list following a filter. `test/search.test.mjs`: typos, nicknames, F-150
   spellings, no look-alikes for exact words, nothing guessed for numbers/nonsense, filter search. `test/cloud.test.mjs` covers publish and the worker
-  (PIN gate, streamed cars, prefs, outcomes) against a fake D1 on `node:sqlite`. `test/scan.test.mjs` runs a real headless
+  (PIN gate, streamed cars, prefs, outcomes, the live-search forward and its hourly limit) against a fake D1 on `node:sqlite`. `test/scan.test.mjs` runs a real headless
   browser against an Express server that copies each site shape: CarGurus feed (400 cars,
   oldest-first, asserts the early stop after 6 requests), CarGurus page fallback, a bot wall,
   dealer API + Next, JSON-LD, plain HTML + Load more, "VIN:" label cards, VIN-less
@@ -248,4 +282,6 @@ the config template, adds a Startup shortcut to `start.bat` (restart loop) and a
   a price only on the page, and a broken site. `test/extract.test.mjs` includes the live CarGurus,
   DealerOn and AutoCorner feed shapes and bot-wall vs reCAPTCHA pages.
 - **Next ideas:** list dealers seen on CarGurus that aren't in dealers.csv yet; an
-  offer-range hint from comparable cars in the data.
+  offer-range hint from comparable cars in the data; "track this car" from Search the U.S. into the
+  call list; keep price/days-on-lot history for every car seen (the "true age" record behind the
+  Zillow-of-used-cars idea).

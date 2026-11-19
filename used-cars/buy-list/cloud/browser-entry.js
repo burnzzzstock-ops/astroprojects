@@ -3,3 +3,4 @@
 // public/logic.js as the global `BuyLogic`.
 export { OUTCOMES, buildCallList, browseListings, filterSummary, status, callListCsv } from "../src/buyList.js";
 export { parseFilter } from "../src/filters.js";
+export { liveResults, parseLiveQuery, liveCatalog } from "../src/live.js";

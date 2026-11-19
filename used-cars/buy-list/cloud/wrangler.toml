@@ -12,6 +12,7 @@ binding = "ASSETS"
 
 [vars]
 TIMEZONE = "America/Chicago"
+STORE_ZIP = "39540"          # Search the U.S.: "anywhere" and shipping are measured from here
 GITHUB_REPO = "burnzzzstock-ops/astroprojects"
 
 [[kv_namespaces]]

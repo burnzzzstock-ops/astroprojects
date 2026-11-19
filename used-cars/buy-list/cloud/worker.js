@@ -7,17 +7,21 @@
 //   POST /api/outcome  log a call (same rules as the local app's recordOutcome)
 //   POST /api/hide | /api/unhide   hide a dealer / bring it back
 //   POST /api/scan     start a scan on GitHub (needs the optional GITHUB_TOKEN secret)
+//   GET  /api/live     Search the U.S.: one plain CarGurus request built from ?q= (src/live.js),
+//                      its answer passed back as is; the browser turns it into cars
 // The big scan data is passed through as text, never parsed here, so requests stay
 // inside the free plan's CPU limit.
 import { OUTCOMES } from "../src/buyList.js";
 import { cleanFilter } from "../src/filters.js";
 import { localDay } from "../src/util.js";
+import { parseLiveQuery, liveSearchUrl } from "../src/live.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 const json = (body, status = 200) => new Response(typeof body === "string" ? body : JSON.stringify(body), { status, headers: JSON_HEADERS });
 
 const MAX_WRONG_PINS = 20; // per IP per hour
 const SCAN_COOLDOWN_MIN = 30;
+const LIVE_PER_HOUR = 300; // live searches per IP per hour: a busy morning, not a scraper
 
 function samePin(a, b) {
   const x = new TextEncoder().encode(a), y = new TextEncoder().encode(b);
@@ -148,6 +152,29 @@ async function hideDealer(request, env, hide) {
   return json({ ok: true });
 }
 
+// Search the U.S.: the request is built here from checked picks (never a URL from the
+// page, so this can't be used as an open proxy), sent plain (CarGurus refuses requests
+// dressed up as a browser) and its body streamed back unparsed.
+async function liveSearch(request, env, url) {
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const hourAgo = new Date(Date.now() - 3600e3).toISOString();
+  const { n } = await env.DB.prepare("SELECT COUNT(*) AS n FROM live_calls WHERE ip = ? AND at > ?").bind(ip, hourAgo).first();
+  if (n >= LIVE_PER_HOUR) return json({ error: "That's a lot of searches this hour. Try again in a little while." }, 429);
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO live_calls (ip, at) VALUES (?, ?)").bind(ip, new Date().toISOString()),
+    env.DB.prepare("DELETE FROM live_calls WHERE at < ?").bind(hourAgo),
+  ]);
+  const q = parseLiveQuery(url.searchParams.get("q"), { zip: env.STORE_ZIP || "39540" });
+  let r;
+  try {
+    r = await fetch(liveSearchUrl(q));
+  } catch {
+    return json({ error: "CarGurus couldn't be reached from the web version. Try again in a minute." }, 502);
+  }
+  if (!r.ok) return json({ error: `CarGurus didn't answer the search (HTTP ${r.status}). Try again in a minute.` }, 502);
+  return new Response(r.body, { headers: JSON_HEADERS });
+}
+
 // Starts .github/workflows/buy-list-scan.yml when a GitHub token is set up.
 async function startScan(env) {
   if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
@@ -181,6 +208,7 @@ export default {
     if (route === "POST /api/hide") return hideDealer(request, env, true);
     if (route === "POST /api/unhide") return hideDealer(request, env, false);
     if (route === "POST /api/scan") return startScan(env);
+    if (route === "GET /api/live") return liveSearch(request, env, url);
     return json({ error: "not found" }, 404);
   },
 };

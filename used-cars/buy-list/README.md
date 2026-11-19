@@ -159,15 +159,27 @@ http://localhost:4400).
   third row…), certified, price, miles, days listed, price vs. CarGurus' market
   value, CarGurus rating, price dropped, distance, state, city, dealer, franchise
   or independent, where it was found, and call status. The Top 10, today's calls,
-  Search all cars and the spreadsheet all follow them. **+ Save this search** keeps
+  Search aged cars and the spreadsheet all follow them. **+ Save this search** keeps
   a set under a name ("Trucks under 40k"); tap it to switch back. **★ Astro
   default** clears them: everything aged, Fords first, then under 80k miles. On the
   web version the filters and saved searches are kept online, so they're the same
   on every phone and computer.
-- **Search all cars** searches every aged car ("tacoma", "f-150 lariat",
+- **Search aged cars** searches every aged car on the list ("tacoma", "f-150 lariat",
   "gulfport"). Misspellings are forgiven: "tacomaa", "silvarado" or "chevy" still
   find the cars and the page asks "Did you mean Tacoma?", and "f150", "F-150"
   and "f 150" all work. The search box in the filters works the same way.
+- **Search the U.S.** looks up any used car in America, of any age, straight from
+  CarGurus at the moment you search (nothing is copied or saved). Pick a make and
+  model (popular ones first), years, price, most miles, and where: **Anywhere in the
+  U.S.**, **In certain states** (tick states, or tap a region like Gulf Coast,
+  Southeast or Great Lakes), or **Near a ZIP code** within so many miles. Choose
+  what shows first: best deals, lowest or highest price, lowest miles, newest
+  listings, or longest listed. Each car shows how long it's been listed, the dealer
+  and town, roughly how far it is from us, a rough shipping cost, the delivered
+  price, and how that compares to CarGurus' market value, plus a **Call** button and
+  a link to the listing. **Show more cars** loads the next batch. Shipping is a rough
+  estimate, not a quote, and a car listed over a year gets a reminder to check it's
+  still there. These cars can't be marked as calls yet.
 - **Dealers** lists every dealer being watched, closest first, with how many aged
   cars each has and any site that couldn't be read on the last scan.
 - **Download spreadsheet** and **Print today's list** give you a copy for Excel or
@@ -228,7 +240,7 @@ Everything the tool knows is stored in `data\buylist.json`, with a backup copy a
 
 ## For developers
 
-`npm test` runs 60 tests offline: the extractor against CarGurus, JSON-LD and
+`npm test` runs 68 tests offline: the extractor against CarGurus, JSON-LD and
 dealer-API data shapes; merging and price drops; ranking; filters; the forgiving
 search; call outcomes;
 a full headless-browser scan against fake local copies of each kind of site; and

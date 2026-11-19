@@ -63,6 +63,19 @@
     const method = (opts.method || "GET").toUpperCase();
     const headers = { "content-type": "application/json", ...(opts.headers || {}) };
 
+    // Search the U.S.: the server forwards one CarGurus request; the cars are made here.
+    if (method === "GET" && p === "/api/catalog") return reply(L.liveCatalog());
+    if (method === "GET" && p === "/api/live") {
+      const r = await realFetch(url, { headers });
+      if (!r.ok) return r;
+      const storeZip = D?.cfg?.zip || "39540";
+      try {
+        return reply(L.liveResults(await r.text(), L.parseLiveQuery(u.searchParams.get("q"), { zip: storeZip }), { storeZip }));
+      } catch (e) {
+        return reply({ error: e.message }, 502);
+      }
+    }
+
     if (method === "GET") {
       if (!D || (p === "/api/status" && Date.now() - D.at > RELOAD_MS)) {
         const failed = await load(headers);

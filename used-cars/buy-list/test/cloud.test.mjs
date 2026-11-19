@@ -145,3 +145,32 @@ test("server: call outcomes, reopen, hide/unhide, scan button", { skip: !sqlite 
   const scan = await (await call("POST", "/api/scan")).json();
   assert.match(scan.message, /every morning/, "without a GitHub token the button explains the schedule");
 });
+
+test("server: Search the U.S. forwards one plain CarGurus request built from checked picks", { skip: !sqlite && "needs node:sqlite (Node 22+)" }, async () => {
+  const { env, call } = await worker();
+  const realFetch = globalThis.fetch;
+  const sent = [];
+  let answer = () => new Response('[{"id":1}]', { status: 200 });
+  globalThis.fetch = async (url, init) => { sent.push({ url: String(url), init }); return answer(); };
+  try {
+    const q = encodeURIComponent(JSON.stringify({ make: "m2", where: "states", states: ["TX"], priceMax: 30000, url: "https://evil.example/" }));
+    assert.equal((await call("GET", `/api/live?q=${q}`, null, "")).status, 401, "behind the PIN");
+    const r = await call("GET", `/api/live?q=${q}`);
+    assert.equal(r.status, 200);
+    assert.equal(await r.text(), '[{"id":1}]', "CarGurus' answer passed through unparsed");
+    const u = new URL(sent[0].url);
+    assert.equal(u.host, "www.cargurus.com", "the worker builds the URL; nothing from the page is fetched");
+    assert.equal(u.searchParams.get("entitySelectingHelper.selectedEntity"), "m2");
+    assert.equal(u.searchParams.get("maxPrice"), "30000");
+    assert.equal(sent[0].init, undefined, "plain request: no browser headers");
+    answer = () => new Response("", { status: 406 });
+    const blocked = await call("GET", `/api/live?q=${q}`);
+    assert.equal(blocked.status, 502);
+    assert.match((await blocked.json()).error, /HTTP 406/);
+    env.DB.raw.exec(`INSERT INTO live_calls (ip, at) SELECT '10.0.0.9', '${new Date().toISOString()}' FROM (SELECT 1 UNION ALL SELECT 2) a, (SELECT 1 UNION ALL SELECT 2) b`);
+    for (let i = 0; i < 296; i++) env.DB.raw.prepare("INSERT INTO live_calls (ip, at) VALUES (?, ?)").run("10.0.0.9", new Date().toISOString());
+    assert.equal((await call("GET", `/api/live?q=${q}`, null, "246810", "10.0.0.9")).status, 429, "300 searches an hour per device");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

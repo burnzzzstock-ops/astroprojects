@@ -11,7 +11,8 @@ import { dealerRoster } from "./roster.js";
 import { parseFilter, cleanFilter } from "./filters.js";
 import { readDealers } from "./sources/dealerSites.js";
 import { runScan, scanRunning } from "./scan.js";
-import { localDay } from "./util.js";
+import { localDay, sleep } from "./util.js";
+import { parseLiveQuery, runLiveSearch, liveCatalog } from "./live.js";
 
 const MANUAL_COOLDOWN_MIN = 30; // be gentle with the sites (and the free API quota)
 
@@ -50,6 +51,22 @@ app.get("/api/listings", (req, res) => {
 });
 
 app.get("/api/filters", (req, res) => res.json(filterSummary(readDb(), config, parseFilter(req.query.f))));
+
+// Search the U.S. (src/live.js): ?q= is the search as JSON; one plain CarGurus request
+// per search or "show more", at least a second apart. Nothing is stored.
+let liveNext = 0;
+app.get("/api/live", async (req, res) => {
+  const q = parseLiveQuery(req.query.q, { zip: config.zip });
+  const wait = liveNext - Date.now();
+  liveNext = Math.max(Date.now(), liveNext) + 1000;
+  if (wait > 0) await sleep(wait);
+  try {
+    res.json(await runLiveSearch(q, { storeZip: config.zip }));
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+app.get("/api/catalog", (req, res) => res.json(liveCatalog()));
 
 // The UCM's current filter and named saved searches (data/prefs.json), so they stick.
 app.get("/api/prefs", (req, res) => res.json(readPrefs()));

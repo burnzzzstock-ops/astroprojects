@@ -74,7 +74,7 @@
   .linkbtn.danger { color:var(--red); }
 
   /* Tabs */
-  .tabs { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:24px 0 16px; }
+  .tabs { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin:24px 0 16px; }
   .tabs button { font:inherit; font-size:17px; font-weight:600; min-height:54px; padding:8px 10px; border-radius:10px; cursor:pointer; touch-action:manipulation;
                  background:#fff; color:var(--navy); border:2px solid var(--line); }
   .tabs button:hover { border-color:var(--navy); }
@@ -202,6 +202,14 @@
   .empty { text-align:center; padding:36px 18px; color:var(--mut); font-size:18px; }
   code { font-size:16px; background:#f1f3f6; padding:1px 6px; border-radius:6px; }
 
+  /* Search the U.S. */
+  .us-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin-top:14px; }
+  .us-where { border:2px solid var(--line); border-radius:10px; padding:10px 16px 14px; margin:18px 0 0; }
+  .us-where legend { font-weight:700; font-size:17px; padding:0 6px; }
+  .us-modes { display:flex; flex-wrap:wrap; gap:0 24px; }
+  .state-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:0 14px; margin-top:6px; }
+  .us-deal { font-weight:700; }
+
   /* PIN dialog + toast */
   .modal { position:fixed; inset:0; z-index:20; background:rgba(14,26,42,.55); display:grid; place-items:center; padding:16px; }
   .modal-box { width:100%; max-width:420px; background:#fff; border-radius:14px; padding:26px 22px; box-shadow:0 20px 50px rgba(0,0,0,.3); }
@@ -223,6 +231,9 @@
     .stats { grid-template-columns:repeat(2, 1fr); gap:10px; }
     .stat b { font-size:30px; }
     .tabs { grid-template-columns:repeat(2, 1fr); }
+    .tabs button:last-child:nth-child(odd) { grid-column:span 2; }
+    .us-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .us-modes { flex-direction:column; }
     .outs { grid-template-columns:repeat(2, minmax(0, 1fr)); }
     .fields { grid-template-columns:1fr; gap:10px; }
     .search-row { grid-template-columns:1fr; gap:10px; }
@@ -303,7 +314,8 @@
 
   <nav class="tabs" aria-label="Views">
     <button data-view="today" class="on">Today's calls</button>
-    <button data-view="all">Search all cars</button>
+    <button data-view="all">Search aged cars</button>
+    <button data-view="us">Search the U.S.</button>
     <button data-view="dealers">Dealers</button>
     <button data-view="hidden">Hidden dealers</button>
   </nav>
@@ -343,6 +355,55 @@
       <div class="fixnote hidden" id="allFix" role="status"></div>
     </div>
     <div id="all"></div>
+  </section>
+
+  <section id="view-us" class="hidden">
+    <div class="card no-print">
+      <h2>Search every used car in the U.S.</h2>
+      <p class="mut small" style="margin:4px 0 0;">Pulled from CarGurus the moment you search: any age, anywhere. Shipping is a rough estimate to us, not a quote.</p>
+      <form id="usForm" onsubmit="usSearch(event)">
+        <div class="us-grid">
+          <label>Make <select id="usMake"><option value="">Any make</option></select></label>
+          <label>Model <select id="usModel"><option value="">Any model</option></select></label>
+          <label>Year from <input id="usYearMin" inputmode="numeric" placeholder="Any"></label>
+          <label>Year to <input id="usYearMax" inputmode="numeric" placeholder="Any"></label>
+          <label>Lowest price <input id="usPriceMin" inputmode="numeric" placeholder="Any"></label>
+          <label>Highest price <input id="usPriceMax" inputmode="numeric" placeholder="Any"></label>
+          <label>Most miles <input id="usMilesMax" inputmode="numeric" placeholder="Any"></label>
+          <label>Show first <select id="usSort"></select></label>
+        </div>
+        <fieldset class="us-where">
+          <legend>Where</legend>
+          <div class="us-modes">
+            <label class="opt"><input type="radio" name="usWhere" value="us" checked> Anywhere in the U.S.</label>
+            <label class="opt"><input type="radio" name="usWhere" value="states"> In certain states</label>
+            <label class="opt"><input type="radio" name="usWhere" value="near"> Near a ZIP code</label>
+          </div>
+          <div id="usNear" class="us-grid hidden">
+            <label>ZIP code <input id="usZip" inputmode="numeric" maxlength="5" autocomplete="postal-code"></label>
+            <label>Within
+              <select id="usRadius">
+                <option value="25">25 miles</option><option value="50">50 miles</option><option value="100">100 miles</option>
+                <option value="200" selected>200 miles</option><option value="300">300 miles</option><option value="500">500 miles</option>
+                <option value="1000">1,000 miles</option>
+              </select>
+            </label>
+          </div>
+          <div id="usStates" class="hidden">
+            <p class="mut small" style="margin:10px 0 0;">Tap a region, or tick states one by one. <span id="usStateCount"></span></p>
+            <div class="saved" id="usRegions"></div>
+            <div class="state-grid" id="usStateList"></div>
+          </div>
+        </fieldset>
+        <div class="actions">
+          <button class="btn primary" type="submit" id="usGo">Search</button>
+          <button class="btn" type="button" onclick="usReset()">Start over</button>
+        </div>
+      </form>
+      <div class="count-line" id="usCount" role="status"></div>
+    </div>
+    <div id="usResults"></div>
+    <div class="actions hidden" id="usMoreWrap" style="justify-content:center;"><button class="btn" id="usMore" onclick="usMore()">Show more cars</button></div>
   </section>
 
   <section id="view-dealers" class="hidden">
@@ -928,12 +989,193 @@ async function loadHidden() {
     : `<p class="mut">No hidden dealers.</p>`;
 }
 
+// ── Search the U.S. (src/live.js): live CarGurus results, any age, anywhere; nothing stored ──
+const US = { catalog: null, q: null, rows: [], seen: new Set(), page: 0, more: false, busy: false };
+const usEl = id => document.getElementById(id);
+const US_RATING = { GREAT_PRICE: ["Great price", "bought"], GOOD_PRICE: ["Good price", "bought"], FAIR_PRICE: ["Fair price", "med"],
+  POOR_PRICE: ["High price", "neg"], HIGH_PRICE: ["High price", "neg"], OVERPRICED: ["Overpriced", "neg"] };
+const usOpt = m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`;
+
+function usMakeOptions() {
+  const makes = US.catalog.makes;
+  usEl("usMake").innerHTML = `<option value="">Any make</option><optgroup label="Popular makes">${makes.filter(m => m.popular).map(usOpt).join("")}</optgroup><optgroup label="All makes">${makes.map(usOpt).join("")}</optgroup>`;
+}
+function usModelOptions() {
+  const make = US.catalog.makes.find(m => m.id === usEl("usMake").value);
+  const pop = make ? make.models.filter(m => m.popular) : [];
+  usEl("usModel").innerHTML = `<option value="">Any model</option>` + (!make ? ""
+    : pop.length ? `<optgroup label="Popular models">${pop.map(usOpt).join("")}</optgroup><optgroup label="All models">${make.models.map(usOpt).join("")}</optgroup>`
+    : make.models.map(usOpt).join(""));
+  usEl("usModel").disabled = !make;
+}
+function usWhere() { return document.querySelector('input[name="usWhere"]:checked').value; }
+function usWhereShow() {
+  usEl("usNear").classList.toggle("hidden", usWhere() !== "near");
+  usEl("usStates").classList.toggle("hidden", usWhere() !== "states");
+}
+function usPickedStates() { return [...document.querySelectorAll("#usStateList input:checked")].map(x => x.dataset.state); }
+function usStatesChanged() {
+  const picked = usPickedStates();
+  usEl("usStateCount").textContent = picked.length ? `${plural(picked.length, "state")} picked.` : "";
+  for (const b of document.querySelectorAll("#usRegions [data-region]")) {
+    const reg = US.catalog.regions[Number(b.dataset.region)];
+    b.classList.toggle("on", reg.states.every(c => picked.includes(c)));
+  }
+}
+
+async function usOpen() {
+  if (US.catalog) return;
+  try { US.catalog = await api("/catalog"); } catch (e) { toast(e.message); return; }
+  usMakeOptions();
+  usModelOptions();
+  usEl("usSort").innerHTML = US.catalog.sorts.map(s => `<option value="${esc(s.key)}">${esc(s.label)}</option>`).join("");
+  usEl("usRegions").innerHTML = US.catalog.regions.map((r, i) => `<button type="button" class="pillbtn" data-region="${i}">${esc(r.name)}</button>`).join("");
+  usEl("usStateList").innerHTML = US.catalog.states.map(s => `<label class="opt"><input type="checkbox" data-state="${esc(s.code)}"> ${esc(s.name)}</label>`).join("");
+  usEl("usZip").value = STATUS?.filters?.zip || "";
+  usRestore();
+}
+
+function usReadForm() {
+  return {
+    make: usEl("usMake").value || null, model: usEl("usModel").value || null,
+    yearMin: usEl("usYearMin").value, yearMax: usEl("usYearMax").value,
+    priceMin: usEl("usPriceMin").value, priceMax: usEl("usPriceMax").value, milesMax: usEl("usMilesMax").value,
+    sort: usEl("usSort").value, where: usWhere(), zip: usEl("usZip").value.trim(), radius: usEl("usRadius").value,
+    states: usPickedStates(),
+  };
+}
+// The last search comes back next time (this device only).
+function usRestore() {
+  let q = null;
+  try { q = JSON.parse(localStorage.getItem("buylist_us") || "null"); } catch { /* storage blocked */ }
+  if (!q) return;
+  usEl("usMake").value = q.make || "";
+  usModelOptions();
+  usEl("usModel").value = q.model || "";
+  for (const k of ["YearMin", "YearMax", "PriceMin", "PriceMax", "MilesMax"]) usEl("us" + k).value = q[k[0].toLowerCase() + k.slice(1)] || "";
+  if (q.sort) usEl("usSort").value = q.sort;
+  if (q.zip) usEl("usZip").value = q.zip;
+  if (q.radius) usEl("usRadius").value = q.radius;
+  const radio = document.querySelector(`input[name="usWhere"][value="${q.where === "near" || q.where === "states" ? q.where : "us"}"]`);
+  if (radio) radio.checked = true;
+  for (const x of document.querySelectorAll("#usStateList input")) x.checked = (q.states || []).includes(x.dataset.state);
+  usWhereShow();
+  usStatesChanged();
+}
+function usReset() {
+  usEl("usForm").reset();
+  usModelOptions();
+  usEl("usZip").value = STATUS?.filters?.zip || "";
+  usWhereShow();
+  usStatesChanged();
+  US.q = null; US.rows = []; US.seen = new Set(); US.more = false;
+  usEl("usResults").innerHTML = "";
+  usEl("usCount").textContent = "";
+  usEl("usMoreWrap").classList.add("hidden");
+  try { localStorage.removeItem("buylist_us"); } catch { /* storage blocked */ }
+}
+
+async function usSearch(e) {
+  e?.preventDefault();
+  if (!US.catalog) await usOpen();
+  if (!US.catalog) return;
+  const q = usReadForm();
+  if (q.where === "states" && !q.states.length) { toast("Pick at least one state, or choose Anywhere."); return; }
+  if (q.where === "near" && !/^\d{5}$/.test(q.zip)) { toast("Type a 5-digit ZIP code."); return; }
+  try { localStorage.setItem("buylist_us", JSON.stringify(q)); } catch { /* storage blocked */ }
+  US.q = q; US.rows = []; US.seen = new Set(); US.page = 0; US.more = false;
+  usEl("usResults").innerHTML = "";
+  await usFetch();
+}
+async function usMore() {
+  if (!US.q || !US.more) return;
+  US.page++;
+  await usFetch();
+}
+// One CarGurus page per request. A states search can come back mostly from next door,
+// so it keeps going (up to 4 pages) until there's a screenful.
+async function usFetch() {
+  if (US.busy) return;
+  US.busy = true;
+  usEl("usGo").disabled = usEl("usMore").disabled = true;
+  usEl("usCount").textContent = "Searching CarGurus…";
+  const start = US.rows.length;
+  try {
+    for (let tries = 0; tries < 4; tries++) {
+      const r = await api(`/live?q=${encodeURIComponent(JSON.stringify({ ...US.q, page: US.page }))}`);
+      for (const c of r.rows) if (!US.seen.has(c.key)) { US.seen.add(c.key); US.rows.push(c); }
+      US.more = r.more;
+      if (!r.more || US.rows.length - start >= 12) break;
+      US.page++;
+    }
+  } catch (e) { toast(e.message); }
+  US.busy = false;
+  usEl("usGo").disabled = usEl("usMore").disabled = false;
+  usRender(start);
+}
+
+function usSummary() {
+  const q = US.q, make = US.catalog.makes.find(m => m.id === q.make), model = make?.models.find(m => m.id === q.model);
+  const parts = [model ? `${make.name} ${model.name}` : make ? make.name : ""];
+  if (q.where === "states") parts.push(q.states.length > 4 ? `in ${q.states.length} states` : `in ${q.states.map(c => US.catalog.states.find(s => s.code === c)?.name || c).join(", ")}`);
+  else if (q.where === "near") parts.push(`within ${num(Number(q.radius))} miles of ${q.zip}`);
+  else parts.push("anywhere in the U.S.");
+  return parts.filter(Boolean).join(", ");
+}
+function usCard(c) {
+  const tel = telHref(c.dealer?.phone);
+  const listing = safeUrl(c.url);
+  const where = [c.dealer?.city, c.dealer?.state].filter(Boolean).join(", ");
+  const rating = US_RATING[c.dealRating];
+  let ship = "";
+  if (c.shipping === 0) ship = `Close to us (about ${plural(c.roadMiles, "mile")}): drive it back.`;
+  else if (c.shipping) ship = `About ${plural(c.roadMiles, "mile")} from us. Shipping about ${money(c.shipping)}${c.delivered ? `, so delivered about <b>${money(c.delivered)}</b>` : ""}.`;
+  if (ship && c.vsMarket != null) {
+    ship += c.vsMarket < 0 ? ` That's <span class="us-deal">${money(-c.vsMarket)} under</span> CarGurus' market value.`
+      : c.vsMarket > 0 ? ` That's ${money(c.vsMarket)} over CarGurus' market value.` : " That's right at CarGurus' market value.";
+  }
+  const meta = [[c.body, c.drive].filter(Boolean).map(esc).join(", "), c.vin ? `VIN <span class="vin">${esc(c.vin)}</span>` : "",
+    c.stock ? `Stock # ${esc(c.stock)}` : "", listing ? `<a href="${esc(listing)}" target="_blank" rel="noopener">See it on CarGurus ↗</a>` : ""].filter(Boolean);
+  return `<article class="card">
+    <div class="unit-top"><h3 class="unit-title">${esc(carTitle(c))}</h3>${rating ? `<div class="badges"><span class="badge ${rating[1]}">${rating[0]}</span></div>` : ""}</div>
+    <div class="seller">${esc(c.dealer?.name || "Seller")}${where ? ` · ${esc(where)}` : ""}</div>
+    <div class="facts"><span class="price">${money(c.price)}</span><span>${num(c.miles)} miles</span>${c.days != null ? `<span>On the market ${plural(c.days, "day")}</span>` : ""}</div>
+    ${ship ? `<div class="alert ${c.vsMarket != null && c.vsMarket < 0 ? "good" : "info"}">${ship}</div>` : ""}
+    ${c.days > 365 ? `<div class="alert bad">Listed over a year: call to make sure it's still there before you count on it.</div>` : ""}
+    ${meta.length ? `<div class="meta">${meta.join(" · ")}</div>` : ""}
+    ${tel ? `<a class="call-btn" href="${tel}">${ICON_PHONE}<span>Call ${esc(prettyPhone(c.dealer.phone))}</span></a>` : ""}
+  </article>`;
+}
+function usRender(start) {
+  if (!start) usEl("usResults").innerHTML = "";
+  usEl("usResults").insertAdjacentHTML("beforeend", US.rows.slice(start).map(usCard).join(""));
+  const what = usSummary(), end = what.endsWith(".") ? "" : ".";
+  usEl("usCount").textContent = US.rows.length
+    ? `Showing ${plural(US.rows.length, "car")}: ${what}${end}${US.more ? " More below." : " That's all of them."}`
+    : `No cars match: ${what}${end} Try fewer limits or a wider area.`;
+  usEl("usMoreWrap").classList.toggle("hidden", !US.more || !US.rows.length);
+}
+
+usEl("usMake").addEventListener("change", usModelOptions);
+for (const r of document.querySelectorAll('input[name="usWhere"]')) r.addEventListener("change", usWhereShow);
+usEl("usStateList").addEventListener("change", usStatesChanged);
+usEl("usRegions").addEventListener("click", e => {
+  const b = e.target.closest("[data-region]");
+  if (!b) return;
+  const reg = US.catalog.regions[Number(b.dataset.region)];
+  const boxes = [...document.querySelectorAll("#usStateList input")].filter(x => reg.states.includes(x.dataset.state));
+  const allOn = boxes.every(x => x.checked);
+  for (const x of boxes) x.checked = !allOn;
+  usStatesChanged();
+});
+
 function openTab(view) { document.querySelector(`.tabs button[data-view="${view}"]`)?.click(); }
 
 for (const b of document.querySelectorAll(".tabs button")) {
   b.onclick = () => {
     for (const x of document.querySelectorAll(".tabs button")) { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); }
-    for (const v of ["today", "all", "dealers", "hidden"]) document.getElementById("view-" + v).classList.toggle("hidden", v !== b.dataset.view);
+    for (const v of ["today", "all", "us", "dealers", "hidden"]) document.getElementById("view-" + v).classList.toggle("hidden", v !== b.dataset.view);
+    if (b.dataset.view === "us") usOpen();
     if (b.dataset.view === "dealers") loadDealers();
     if (b.dataset.view === "today") loadToday();
     if (b.dataset.view === "all") browse();
